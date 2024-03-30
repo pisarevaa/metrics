@@ -1,7 +1,6 @@
 package main
 
 import (
-	_ "fmt"
 	"net/http"
 	"strings"
 )
@@ -25,7 +24,7 @@ func (st *MemStorage) handleMetrics(res http.ResponseWriter, req *http.Request) 
 	// Get path params
 	path_params := strings.Split(strings.TrimPrefix(req.URL.Path, "/update/"), "/")
 	if len(path_params) != 3 {
-		http.Error(res, "Path should contains all three fields!", http.StatusBadRequest)
+		http.Error(res, "Path should contains all three fields!", http.StatusNotFound)
 		return
 	}
 
