@@ -22,16 +22,16 @@ func (st *MemStorage) handleMetrics(res http.ResponseWriter, req *http.Request) 
 		return
 	}
 	// Get path params
-	path_params := strings.Split(strings.TrimPrefix(req.URL.Path, "/update/"), "/")
-	if len(path_params) != 3 {
+	pathParams := strings.Split(strings.TrimPrefix(req.URL.Path, "/update/"), "/")
+	if len(pathParams) != 3 {
 		http.Error(res, "Path should contains all three fields!", http.StatusNotFound)
 		return
 	}
 
 	metric := Metric{
-		metricName:  path_params[1],
-		metricType:  path_params[0],
-		metricValue: path_params[2],
+		metricName:  pathParams[1],
+		metricType:  pathParams[0],
+		metricValue: pathParams[2],
 	}
 
 	if !(metric.metricType == "gauge" || metric.metricType == "counter") {
@@ -42,7 +42,7 @@ func (st *MemStorage) handleMetrics(res http.ResponseWriter, req *http.Request) 
 		http.Error(res, "Empty metricName is not allowed!", http.StatusNotFound)
 		return
 	}
-	if metric.metricValue == "" {
+	if metric.metricValue == "" || metric.metricValue == "none" {
 		http.Error(res, "Empty metricValue is not allowed!", http.StatusBadRequest)
 		return
 	}
