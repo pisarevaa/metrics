@@ -7,6 +7,7 @@ import (
 	"reflect"
 	"runtime"
 	"sync"
+	"io"
 	"time"
 )
 
@@ -48,11 +49,18 @@ type MemStorage struct {
 	Counter map[string]int64
 }
 
-func sendLog(url string) {
-	_, err := http.Post(url, "text/plain", nil)
+func sendLog(url string) ([]byte, error) {
+	resp, err := http.Post(url, "text/plain", nil)
 	if err != nil {
 		fmt.Printf("error making http request: %s\n", err)
+		return nil, err
 	}
+	defer resp.Body.Close()
+	respBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+	return respBody, nil
 }
 
 func (ms *MemStorage) updateMemStats() {
