@@ -61,5 +61,6 @@ func (ms *MemStorage) HandleMetrics(res http.ResponseWriter, req *http.Request) 
 		}
 		ms.Metrics.Counter[metricName] += intValue
 	}
+	res.Header().Add("Content-Type", "text/plain")
 	fmt.Println("Got request ", req.URL.Path)
 }

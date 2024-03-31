@@ -88,32 +88,37 @@ func (ms *MemStorage) updateRandomValue() {
 }
 
 func (ms *MemStorage) updatePollCount() {
-	ms.Gauge["RandomValue"] = rand.Float64()
+	ms.Counter["PollCount"] += 1
 }
 
-func (ms *MemStorage) UpdateMetrics(wg *sync.WaitGroup) {
+func (ms *MemStorage) RunUpdateMetrics(wg *sync.WaitGroup) {
 	defer wg.Done()
 	for range time.Tick(pollIntervalSec * time.Second) {
-
-		ms.updateMemStats()
-		ms.updateRandomValue()
-		ms.updatePollCount()
-		fmt.Println("ms.gauge ", ms.Gauge)
-		fmt.Println("ms.counter ", ms.Counter)
+		ms.UpdateMetrics()
 	}
 }
 
-func (ms MemStorage) SendMetrics(wg *sync.WaitGroup) {
+func (ms *MemStorage) UpdateMetrics() {
+	ms.updateMemStats()
+	ms.updateRandomValue()
+	ms.updatePollCount()
+}
+
+
+func (ms MemStorage) RunSendMetrics(wg *sync.WaitGroup) {
 	defer wg.Done()
 	for range time.Tick(reportInterval * time.Second) {
-		fmt.Println("sendMetrics")
-		for metric, value := range ms.Gauge {
-			requestURL := fmt.Sprintf("http://localhost:8080/update/gauge/%v/%v", metric, value)
-			sendLog(requestURL)
-		}
-		for metric, value := range ms.Counter {
-			requestURL := fmt.Sprintf("http://localhost:8080/update/counter/%v/%v", metric, value)
-			sendLog(requestURL)
-		}
+		ms.SendMetrics()
+	}
+}
+
+func (ms MemStorage) SendMetrics() {
+	for metric, value := range ms.Gauge {
+		requestURL := fmt.Sprintf("http://localhost:8080/update/gauge/%v/%v", metric, value)
+		sendLog(requestURL)
+	}
+	for metric, value := range ms.Counter {
+		requestURL := fmt.Sprintf("http://localhost:8080/update/counter/%v/%v", metric, value)
+		sendLog(requestURL)
 	}
 }
