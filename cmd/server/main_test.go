@@ -45,6 +45,7 @@ func TestServerSaveLogs(t *testing.T) {
             result := w.Result()
             assert.Equal(t, tt.want.statusCode, result.StatusCode)
             assert.Equal(t, tt.want.contentType, result.Header.Get("Content-Type"))
+            defer result.Body.Close()
         })
     }
 }
