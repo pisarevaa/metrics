@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
@@ -61,9 +60,6 @@ func (ms *MemStorage) handleMetrics(res http.ResponseWriter, req *http.Request) 
 		}
 		ms.metrics.counter[metricName] += intValue
 	}
-	fmt.Println("ms.metrics.gauge ", ms.metrics.gauge)
-	fmt.Println("ms.metrics.counter ", ms.metrics.counter)
-	// res.WriteHeader(http.StatusOK)
 }
 
 func main() {
