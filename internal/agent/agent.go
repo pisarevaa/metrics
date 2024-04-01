@@ -121,4 +121,6 @@ func (ms MemStorage) SendMetrics() {
 		requestURL := fmt.Sprintf("http://localhost:8080/update/counter/%v/%v", metric, value)
 		sendLog(requestURL)
 	}
+	fmt.Println("Send Gauge ", ms.Gauge)
+	fmt.Println("Send Counter ", ms.Counter)
 }

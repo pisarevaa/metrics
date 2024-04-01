@@ -1,51 +1,121 @@
 package main
 
 import (
-    "net/http"
-    "net/http/httptest"
-    "testing"
-    "github.com/stretchr/testify/assert"
-    "github.com/pisarevaa/metrics/internal/server"
+	"fmt"
+	"io"
+	"net/http"
+	"net/http/httptest"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
+func testRequest(t *testing.T, ts *httptest.Server, method, url string) (*http.Response, string) {
+    fmt.Println(ts.URL+url)
+	req, err := http.NewRequest(method, ts.URL+url, nil)
+	require.NoError(t, err)
+	resp, err := ts.Client().Do(req)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+	respBody, err := io.ReadAll(resp.Body)
+	require.NoError(t, err)
+	return resp, string(respBody)
+}
+
 func TestServerSaveLogs(t *testing.T) {
-    type want struct {
-        contentType string
-        statusCode  int
-    }
-    tests := []struct {
-        name    string
-        request string
-        want    want
-    }{
+
+	ts := httptest.NewServer(MetricsRouter())
+	defer ts.Close()
+
+	type want struct {
+		statusCode  int
+        response string
+	}
+	tests := []struct {
+		name    string
+		url string
+        method string
+		want    want
+	}{
+		{
+			name: "add gauge metric success",
+			want: want{
+				statusCode:  200,
+                response: "",
+			},
+			url: "/update/gauge/HeapAlloc/1.25",
+            method: "POST",
+		},
+		{
+			name: "add counter metric success",
+			want: want{
+				statusCode:  200,
+                response: "",
+			},
+			url: "/update/counter/PollCount/4",
+            method: "POST",
+		},
         {
-            name: "gauge success test",
-            want: want{
-                contentType: "text/plain",
-                statusCode:  200,
-            },
-            request: "/update/gauge/HeapAlloc/1.25",
-        },
+			name: "add wrong metric type",
+			want: want{
+				statusCode:  400,
+                response: "",
+			},
+			url: "/update/test/HeapAlloc/1.25",
+            method: "POST",
+		},
         {
-            name: "counter success test",
-            want: want{
-                contentType: "text/plain",
-                statusCode:  200,
-            },
-            request: "/update/counter/PollCount/4",
-        },
-    }
-    for _, tt := range tests {
-        t.Run(tt.name, func(t *testing.T) {
-            request := httptest.NewRequest(http.MethodPost, tt.request, nil)
-            w := httptest.NewRecorder()
-            storage := server.MemStorage{Metrics: server.MetricGroup{Gauge: make(map[string]float64), Counter: make(map[string]int64)}}
-            h := http.HandlerFunc(storage.HandleMetrics)
-            h(w, request)
-            result := w.Result()
-            assert.Equal(t, tt.want.statusCode, result.StatusCode)
-            assert.Equal(t, tt.want.contentType, result.Header.Get("Content-Type"))
-            defer result.Body.Close()
-        })
-    }
+			name: "add empty metric value",
+			want: want{
+				statusCode:  404,
+                response: "",
+			},
+			url: "/update/counter/HeapAlloc/",
+            method: "POST",
+		},
+        {
+			name: "add wrong metric value",
+			want: want{
+				statusCode:  400,
+                response: "",
+			},
+			url: "/update/counter/HeapAlloc/test",
+            method: "POST",
+		},
+        {
+			name: "get gauge metric success",
+			want: want{
+				statusCode:  200,
+                response: "1.25",
+			},
+			url: "/value/gauge/HeapAlloc",
+            method: "GET",
+		},
+        {
+			name: "get not found metric",
+			want: want{
+				statusCode:  404,
+                response: "",
+			},
+			url: "/value/gauge/NotFound",
+            method: "GET",
+		},
+        {
+			name: "get all metrics success",
+			want: want{
+				statusCode:  200,
+                response: "HeapAlloc: 1.25\nPollCount: 4\n",
+			},
+			url: "/",
+            method: "GET",
+		},
+	}
+	for _, tt := range tests {
+        resp, body := testRequest(t, ts, tt.method, tt.url)
+        assert.Equal(t, tt.want.statusCode, resp.StatusCode)
+        if tt.want.response != "" {
+            assert.Equal(t, tt.want.response, body)
+        }
+	}
 }
