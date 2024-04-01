@@ -113,6 +113,7 @@ func TestServerSaveLogs(t *testing.T) {
 	}
 	for _, tt := range tests {
 		resp, body := testRequest(t, ts, tt.method, tt.url)
+        defer resp.Body.Close()
 		assert.Equal(t, tt.want.statusCode, resp.StatusCode)
 		if tt.want.response != "" {
 			assert.Equal(t, tt.want.response, body)
