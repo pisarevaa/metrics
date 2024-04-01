@@ -1,10 +1,10 @@
 package server
 
 import (
-	"io"
 	"fmt"
 	"github.com/go-chi/chi/v5"
 	"github.com/pisarevaa/metrics/internal/storage"
+	"io"
 	"net/http"
 )
 

@@ -2,14 +2,18 @@ package main
 
 import (
 	"github.com/pisarevaa/metrics/internal/agent"
+	"github.com/go-resty/resty/v2"
 	"sync"
 )
 
 func main() {
-	storage := agent.MemStorage{Gauge: make(map[string]float64), Counter: make(map[string]int64)}
+	client := resty.New()
+	storage := agent.MemStorage{}
+	storage.Init()
+	service := agent.Service{Storage: &storage, Client: client}
 	var wg sync.WaitGroup
 	wg.Add(2)
-	go storage.RunUpdateMetrics(&wg)
-	go storage.RunSendMetrics(&wg)
+	go service.RunUpdateMetrics(&wg)
+	go service.RunSendMetrics(&wg)
 	wg.Wait()
 }

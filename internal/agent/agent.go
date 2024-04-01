@@ -2,12 +2,11 @@ package agent
 
 import (
 	"fmt"
+	"github.com/go-resty/resty/v2"
 	"math/rand"
-	"net/http"
 	"reflect"
 	"runtime"
 	"sync"
-	"io"
 	"time"
 )
 
@@ -44,26 +43,12 @@ var gaugeMetrics = [...]string{
 	"TotalAlloc",
 }
 
-type MemStorage struct {
-	Gauge   map[string]float64
-	Counter map[string]int64
+type Service struct {
+	Client  *resty.Client
+	Storage *MemStorage
 }
 
-func sendLog(url string) ([]byte, error) {
-	resp, err := http.Post(url, "text/plain", nil)
-	if err != nil {
-		fmt.Printf("error making http request: %s\n", err)
-		return nil, err
-	}
-	defer resp.Body.Close()
-	respBody, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, err
-	}
-	return respBody, nil
-}
-
-func (ms *MemStorage) updateMemStats() {
+func (s *Service) updateMemStats() {
 	var memStats runtime.MemStats
 	runtime.ReadMemStats(&memStats)
 	for _, v := range gaugeMetrics {
@@ -79,48 +64,53 @@ func (ms *MemStorage) updateMemStats() {
 		default:
 			panic("not supported type")
 		}
-		ms.Gauge[v] = floatValue
+		s.Storage.Gauge[v] = floatValue
 	}
 }
 
-func (ms *MemStorage) updateRandomValue() {
-	ms.Gauge["RandomValue"] = rand.Float64()
+func (s *Service) updateRandomValue() {
+	s.Storage.Gauge["RandomValue"] = rand.Float64()
 }
 
-func (ms *MemStorage) updatePollCount() {
-	ms.Counter["PollCount"] += 1
+func (s *Service) updatePollCount() {
+	s.Storage.Counter["PollCount"] += 1
 }
 
-func (ms *MemStorage) RunUpdateMetrics(wg *sync.WaitGroup) {
+func (s *Service) RunUpdateMetrics(wg *sync.WaitGroup) {
 	defer wg.Done()
 	for range time.Tick(pollIntervalSec * time.Second) {
-		ms.UpdateMetrics()
+		s.UpdateMetrics()
 	}
 }
 
-func (ms *MemStorage) UpdateMetrics() {
-	ms.updateMemStats()
-	ms.updateRandomValue()
-	ms.updatePollCount()
+func (s *Service) UpdateMetrics() {
+	s.updateMemStats()
+	s.updateRandomValue()
+	s.updatePollCount()
 }
 
-
-func (ms MemStorage) RunSendMetrics(wg *sync.WaitGroup) {
+func (s *Service) RunSendMetrics(wg *sync.WaitGroup) {
 	defer wg.Done()
 	for range time.Tick(reportInterval * time.Second) {
-		ms.SendMetrics()
+		s.SendMetrics()
 	}
 }
 
-func (ms MemStorage) SendMetrics() {
-	for metric, value := range ms.Gauge {
+func (s *Service) SendMetrics() {
+	for metric, value := range s.Storage.Gauge {
 		requestURL := fmt.Sprintf("http://localhost:8080/update/gauge/%v/%v", metric, value)
-		sendLog(requestURL)
+		_, err := s.Client.R().Post(requestURL)
+		if err != nil {
+			fmt.Printf("error making http request: %s\n", err)
+		}
 	}
-	for metric, value := range ms.Counter {
+	for metric, value := range s.Storage.Counter {
 		requestURL := fmt.Sprintf("http://localhost:8080/update/counter/%v/%v", metric, value)
-		sendLog(requestURL)
+		_, err := s.Client.R().Post(requestURL)
+		if err != nil {
+			fmt.Printf("error making http request: %s\n", err)
+		}
 	}
-	fmt.Println("Send Gauge ", ms.Gauge)
-	fmt.Println("Send Counter ", ms.Counter)
+	fmt.Println("Send Gauge ", s.Storage.Gauge)
+	fmt.Println("Send Counter ", s.Storage.Counter)
 }
