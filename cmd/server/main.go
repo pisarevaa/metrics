@@ -1,11 +1,16 @@
 package main
 
 import (
+	"flag"
+	"fmt"
+	"net/http"
+
 	"github.com/go-chi/chi/v5"
 	"github.com/pisarevaa/metrics/internal/server"
 	"github.com/pisarevaa/metrics/internal/storage"
-	"net/http"
 )
+
+var host string
 
 func MetricsRouter() chi.Router {
 	storage := storage.MemStorage{}
@@ -19,7 +24,10 @@ func MetricsRouter() chi.Router {
 }
 
 func main() {
-	err := http.ListenAndServe(":8080", MetricsRouter())
+	flag.StringVar(&host, "a", "localhost:8080", "address and port to run server")
+	flag.Parse()
+	fmt.Printf("Server is running on %v", host)
+	err := http.ListenAndServe(host, MetricsRouter())
 	if err != nil {
 		panic(err)
 	}

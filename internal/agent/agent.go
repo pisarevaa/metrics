@@ -10,9 +10,6 @@ import (
 	"time"
 )
 
-const pollIntervalSec = 2
-const reportInterval = 10
-
 var gaugeMetrics = [...]string{
 	"Alloc",
 	"BuckHashSys",
@@ -44,8 +41,9 @@ var gaugeMetrics = [...]string{
 }
 
 type Service struct {
-	Client  *resty.Client
-	Storage *MemStorage
+	Client   *resty.Client
+	Storage  *MemStorage
+	Settings Settings
 }
 
 func (s *Service) updateMemStats() {
@@ -78,12 +76,13 @@ func (s *Service) updatePollCount() {
 
 func (s *Service) RunUpdateMetrics(wg *sync.WaitGroup) {
 	defer wg.Done()
-	for range time.Tick(pollIntervalSec * time.Second) {
+	for range time.Tick(time.Duration(s.Settings.pollIntervalSec) * time.Second) {
 		s.UpdateMetrics()
 	}
 }
 
 func (s *Service) UpdateMetrics() {
+	fmt.Println("UpdateMetrics")
 	s.updateMemStats()
 	s.updateRandomValue()
 	s.updatePollCount()
@@ -91,21 +90,21 @@ func (s *Service) UpdateMetrics() {
 
 func (s *Service) RunSendMetrics(wg *sync.WaitGroup) {
 	defer wg.Done()
-	for range time.Tick(reportInterval * time.Second) {
+	for range time.Tick(time.Duration(s.Settings.reportInterval) * time.Second) {
 		s.SendMetrics()
 	}
 }
 
 func (s *Service) SendMetrics() {
 	for metric, value := range s.Storage.Gauge {
-		requestURL := fmt.Sprintf("http://localhost:8080/update/gauge/%v/%v", metric, value)
+		requestURL := fmt.Sprintf("%v/update/gauge/%v/%v", s.Settings.serverHost, metric, value)
 		_, err := s.Client.R().Post(requestURL)
 		if err != nil {
 			fmt.Printf("error making http request: %s\n", err)
 		}
 	}
 	for metric, value := range s.Storage.Counter {
-		requestURL := fmt.Sprintf("http://localhost:8080/update/counter/%v/%v", metric, value)
+		requestURL := fmt.Sprintf("%v/update/counter/%v/%v", s.Settings.serverHost, metric, value)
 		_, err := s.Client.R().Post(requestURL)
 		if err != nil {
 			fmt.Printf("error making http request: %s\n", err)
