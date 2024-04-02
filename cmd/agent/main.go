@@ -9,7 +9,6 @@ import (
 
 func main() {
 	settings := agent.Init()
-	fmt.Println("settings", settings)
 	client := resty.New()
 	storage := agent.MemStorage{}
 	storage.Init()

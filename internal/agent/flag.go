@@ -13,7 +13,7 @@ type Settings struct {
 var settings Settings
 
 func Init() Settings {
-	flag.StringVar(&settings.serverHost, "a", "http://localhost:8080", "server host")
+	flag.StringVar(&settings.serverHost, "a", "localhost:8080", "server host")
 	flag.IntVar(&settings.pollIntervalSec, "r", 2, "frequency of sending metrics to the server")
 	flag.IntVar(&settings.reportInterval, "w", 10, "frequency of polling metrics from the runtime package")
 	flag.Parse()

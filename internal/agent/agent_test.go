@@ -7,10 +7,11 @@ import (
 )
 
 func TestUpdateMetrics(t *testing.T) {
+	settings := Init()
 	client := resty.New()
 	storage := MemStorage{}
 	storage.Init()
-	service := Service{Storage: &storage, Client: client}
+	service := Service{Storage: &storage, Client: client, Settings: settings}
 	service.UpdateMetrics()
 	heapInuse1 := service.Storage.Gauge["HeapInuse"]
 	randomValue1 := service.Storage.Gauge["RandomValue"]
