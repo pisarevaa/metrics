@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/pisarevaa/metrics/internal/server"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -24,8 +25,8 @@ func testRequest(t *testing.T, ts *httptest.Server, method, url string) (*http.R
 }
 
 func TestServerSaveLogs(t *testing.T) {
-
-	ts := httptest.NewServer(MetricsRouter())
+	config := server.GetConfigs()
+	ts := httptest.NewServer(MetricsRouter(config))
 	defer ts.Close()
 
 	type want struct {
@@ -113,7 +114,7 @@ func TestServerSaveLogs(t *testing.T) {
 	}
 	for _, tt := range tests {
 		resp, body := testRequest(t, ts, tt.method, tt.url)
-        defer resp.Body.Close()
+		defer resp.Body.Close()
 		assert.Equal(t, tt.want.statusCode, resp.StatusCode)
 		if tt.want.response != "" {
 			assert.Equal(t, tt.want.response, body)

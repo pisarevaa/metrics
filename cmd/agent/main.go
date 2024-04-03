@@ -8,11 +8,11 @@ import (
 )
 
 func main() {
-	settings := agent.Init()
+	config := agent.GetConfigs()
 	client := resty.New()
 	storage := agent.MemStorage{}
 	storage.Init()
-	service := agent.Service{Storage: &storage, Client: client, Settings: settings}
+	service := agent.Service{Storage: &storage, Client: client, Config: config}
 	var wg sync.WaitGroup
 	wg.Add(2)
 	fmt.Println("Client is running...")

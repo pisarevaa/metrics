@@ -10,6 +10,7 @@ import (
 
 type Server struct {
 	Storage *storage.MemStorage
+	Config Config
 }
 
 func (s *Server) StoreMetrics(rw http.ResponseWriter, r *http.Request) {
