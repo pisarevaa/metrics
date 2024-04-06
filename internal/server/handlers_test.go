@@ -1,4 +1,4 @@
-package main
+package server_test
 
 import (
 	"io"
@@ -25,7 +25,7 @@ func testRequest(t *testing.T, ts *httptest.Server, method, url string) (*http.R
 
 func TestServerSaveLogs(t *testing.T) {
 	config := server.GetConfig()
-	ts := httptest.NewServer(MetricsRouter(config))
+	ts := httptest.NewServer(server.MetricsRouter(config))
 	defer ts.Close()
 
 	type want struct {

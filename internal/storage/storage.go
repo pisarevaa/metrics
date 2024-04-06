@@ -6,14 +6,14 @@ import (
 )
 
 type MemStorage struct {
-	Gauge   map[string]float64
-	Counter map[string]int64
+	gauge   map[string]float64
+	counter map[string]int64
 }
 
 func NewMemStorageRepo() *MemStorage {
 	return &MemStorage{
-		Gauge:   make(map[string]float64),
-		Counter: make(map[string]int64),
+		gauge:   make(map[string]float64),
+		counter: make(map[string]int64),
 	}
 }
 
@@ -23,21 +23,21 @@ func (ms *MemStorage) Store(metricType, metricName, metricValue string) error {
 		if err != nil {
 			return errors.New("metricValue is not corect float")
 		}
-		ms.Gauge[metricName] = floatValue
+		ms.gauge[metricName] = floatValue
 	}
 	if metricType == "counter" {
 		intValue, err := strconv.ParseInt(metricValue, 10, 64)
 		if err != nil {
 			return errors.New("metricValue is not correct integer")
 		}
-		ms.Counter[metricName] += intValue
+		ms.counter[metricName] += intValue
 	}
 	return nil
 }
 
 func (ms *MemStorage) Get(metricType, metricName string) (string, error) {
 	if metricType == "gauge" {
-		value, ok := ms.Gauge[metricName]
+		value, ok := ms.gauge[metricName]
 		if !ok {
 			return "", errors.New("metric is not found")
 		}
@@ -45,7 +45,7 @@ func (ms *MemStorage) Get(metricType, metricName string) (string, error) {
 	}
 
 	if metricType == "counter" {
-		value, ok := ms.Counter[metricName]
+		value, ok := ms.counter[metricName]
 		if !ok {
 			return "", errors.New("metric is not found")
 		}
@@ -57,10 +57,10 @@ func (ms *MemStorage) Get(metricType, metricName string) (string, error) {
 
 func (ms *MemStorage) GetAll() map[string]string {
 	metrics := make(map[string]string)
-	for key, value := range ms.Gauge {
+	for key, value := range ms.gauge {
 		metrics[key] = strconv.FormatFloat(value, 'f', -1, 64)
 	}
-	for key, value := range ms.Counter {
+	for key, value := range ms.counter {
 		metrics[key] = strconv.FormatInt(value, 10)
 	}
 	return metrics

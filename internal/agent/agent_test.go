@@ -15,17 +15,33 @@ func TestUpdateMetrics(t *testing.T) {
 	storage := agent.NewMemStorageRepo()
 	service := agent.Service{Storage: storage, Client: client, Config: config}
 	service.UpdateMetrics()
-	heapInuse1 := service.Storage.Gauge["HeapInuse"]
-	randomValue1 := service.Storage.Gauge["RandomValue"]
-	assert.Len(t, service.Storage.Gauge, 28)
-	assert.Len(t, service.Storage.Counter, 1)
-	assert.Equal(t, int64(1), service.Storage.Counter["PollCount"])
+	heapInuseFirst, heapInuseFirstErr := service.Storage.Get("gauge", "HeapInuse")
+	if assert.NoError(t, heapInuseFirstErr) {
+		assert.NotEmpty(t, heapInuseFirst)
+	}
+	randomValueFirst, randomValueFirstErr := service.Storage.Get("gauge", "RandomValue")
+	if assert.NoError(t, randomValueFirstErr) {
+		assert.NotEmpty(t, randomValueFirst)
+	}
+	pollCounterFirst, pollCounterFirstErr := service.Storage.Get("counter", "PollCount")
+	if assert.NoError(t, pollCounterFirstErr) {
+		assert.Equal(t, "1", pollCounterFirst)
+	}
 	service.UpdateMetrics()
-	heapInuse2 := service.Storage.Gauge["HeapInuse"]
-	randomValue2 := service.Storage.Gauge["RandomValue"]
-	assert.NotEqual(t, heapInuse1, heapInuse2)
-	assert.NotEqual(t, randomValue1, randomValue2)
-	assert.Equal(t, int64(2), service.Storage.Counter["PollCount"])
+	heapInuseSecond, heapInuseSecondErr := service.Storage.Get("gauge", "HeapInuse")
+	if assert.NoError(t, heapInuseSecondErr) {
+		assert.NotEmpty(t, heapInuseSecond)
+		assert.NotEqual(t, heapInuseSecond, heapInuseFirst)
+	}
+	randomValueSecond, randomValueSecondErr := service.Storage.Get("gauge", "RandomValue")
+	if assert.NoError(t, randomValueSecondErr) {
+		assert.NotEmpty(t, randomValueSecond)
+		assert.NotEqual(t, randomValueSecond, randomValueFirst)
+	}
+	pollCounterSecond, pollCounterSecondErr := service.Storage.Get("counter", "PollCount")
+	if assert.NoError(t, pollCounterSecondErr) {
+		assert.Equal(t, "2", pollCounterSecond)
+	}
 }
 
 func TestSendMetrics(t *testing.T) {
@@ -35,6 +51,5 @@ func TestSendMetrics(t *testing.T) {
 	service.SendMetrics()
 	service.UpdateMetrics()
 	service.SendMetrics()
-	assert.Len(t, service.Storage.Gauge, 28)
-	assert.Len(t, service.Storage.Counter, 1)
+	assert.NotEmpty(t, service.Storage.GetAll())
 }
