@@ -19,18 +19,17 @@ const readTimeout = 5
 const writeTimout = 10
 
 func MetricsRouter(config server.Config) chi.Router {
-	storage := storage.MemStorage{}
-	storage.Init()
-	server := server.Server{Storage: &storage, Config: config}
+	storage := storage.NewMemStorageRepo()
+	srv := server.NewServer(storage, config)
 	r := chi.NewRouter()
-	r.Post("/update/{metricType}/{metricName}/{metricValue}", server.StoreMetrics)
-	r.Get("/value/{metricType}/{metricName}", server.GetMetric)
-	r.Get("/", server.GetAllMetrics)
+	r.Post("/update/{metricType}/{metricName}/{metricValue}", srv.StoreMetrics)
+	r.Get("/value/{metricType}/{metricName}", srv.GetMetric)
+	r.Get("/", srv.GetAllMetrics)
 	return r
 }
 
 func main() {
-	config := server.GetConfigs()
+	config := server.GetConfig()
 	log.Printf("Server is running on %v", config.Host)
 	srv := &http.Server{
 		Addr:         config.Host,

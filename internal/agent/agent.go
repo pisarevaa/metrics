@@ -9,15 +9,7 @@ import (
 	"runtime"
 	"sync"
 	"time"
-
-	"github.com/go-resty/resty/v2"
 )
-
-type Service struct {
-	Client  *resty.Client
-	Storage *MemStorage
-	Config  Config
-}
 
 func randomInt() int64 {
 	const maxInt = 1000000

@@ -10,11 +10,10 @@ import (
 )
 
 func TestUpdateMetrics(t *testing.T) {
-	config := agent.GetConfigs()
+	config := agent.GetConfig()
 	client := resty.New()
-	storage := agent.MemStorage{}
-	storage.Init()
-	service := agent.Service{Storage: &storage, Client: client, Config: config}
+	storage := agent.NewMemStorageRepo()
+	service := agent.Service{Storage: storage, Client: client, Config: config}
 	service.UpdateMetrics()
 	heapInuse1 := service.Storage.Gauge["HeapInuse"]
 	randomValue1 := service.Storage.Gauge["RandomValue"]
@@ -31,9 +30,8 @@ func TestUpdateMetrics(t *testing.T) {
 
 func TestSendMetrics(t *testing.T) {
 	client := resty.New()
-	storage := agent.MemStorage{}
-	storage.Init()
-	service := agent.Service{Storage: &storage, Client: client}
+	storage := agent.NewMemStorageRepo()
+	service := agent.Service{Storage: storage, Client: client}
 	service.SendMetrics()
 	service.UpdateMetrics()
 	service.SendMetrics()

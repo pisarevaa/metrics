@@ -10,7 +10,7 @@ type Config struct {
 	Host string `env:"ADDRESS"`
 }
 
-func GetConfigs() Config {
+func GetConfig() Config {
 	var config Config
 
 	flag.StringVar(&config.Host, "a", "localhost:8080", "address and port to run server")

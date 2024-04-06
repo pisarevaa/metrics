@@ -12,11 +12,10 @@ import (
 const processes = 2
 
 func main() {
-	config := agent.GetConfigs()
+	config := agent.GetConfig()
 	client := resty.New()
-	storage := agent.MemStorage{}
-	storage.Init()
-	service := agent.Service{Storage: &storage, Client: client, Config: config}
+	storage := agent.NewMemStorageRepo()
+	service := agent.NewService(client, storage, config)
 	var wg sync.WaitGroup
 	wg.Add(processes)
 	log.Println("Client is running...")

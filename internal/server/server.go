@@ -16,6 +16,13 @@ type Server struct {
 	Config  Config
 }
 
+func NewServer(storage *storage.MemStorage, config Config) *Server {
+	return &Server{
+		Storage: storage,
+		Config:  config,
+	}
+}
+
 func (s *Server) StoreMetrics(rw http.ResponseWriter, r *http.Request) {
 	metricType := chi.URLParam(r, "metricType")
 	metricName := chi.URLParam(r, "metricName")

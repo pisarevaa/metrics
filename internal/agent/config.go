@@ -12,7 +12,7 @@ type Config struct {
 	ReportInterval int    `env:"POLL_INTERVAL"`
 }
 
-func GetConfigs() Config {
+func GetConfig() Config {
 	var config Config
 
 	flag.StringVar(&config.Host, "a", "localhost:8080", "server host")
