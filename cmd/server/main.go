@@ -1,16 +1,22 @@
 package main
 
 import (
-	"fmt"
+	"log"
+	"net/http"
+	"time"
+
 	"github.com/go-chi/chi/v5"
+
 	"github.com/pisarevaa/metrics/internal/server"
 	"github.com/pisarevaa/metrics/internal/storage"
-	"net/http"
 )
 
 type Config struct {
 	Host string `env:"ADDRESS"`
 }
+
+const readTimeout = 5
+const writeTimout = 10
 
 func MetricsRouter(config server.Config) chi.Router {
 	storage := storage.MemStorage{}
@@ -25,8 +31,14 @@ func MetricsRouter(config server.Config) chi.Router {
 
 func main() {
 	config := server.GetConfigs()
-	fmt.Printf("Server is running on %v", config.Host)
-	err := http.ListenAndServe(config.Host, MetricsRouter(config))
+	log.Printf("Server is running on %v", config.Host)
+	srv := &http.Server{
+		Addr:         config.Host,
+		Handler:      MetricsRouter(config),
+		ReadTimeout:  readTimeout * time.Second,
+		WriteTimeout: writeTimout * time.Second,
+	}
+	err := srv.ListenAndServe()
 	if err != nil {
 		panic(err)
 	}

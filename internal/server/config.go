@@ -2,11 +2,12 @@ package server
 
 import (
 	"flag"
+
 	"github.com/caarlos0/env/v6"
 )
 
 type Config struct {
-	Host           string `env:"ADDRESS"`
+	Host string `env:"ADDRESS"`
 }
 
 func GetConfigs() Config {

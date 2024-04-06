@@ -1,44 +1,17 @@
 package agent
 
 import (
+	"crypto/rand"
 	"fmt"
-	"github.com/go-resty/resty/v2"
-	"math/rand"
+	"log"
+	"math/big"
 	"reflect"
 	"runtime"
 	"sync"
 	"time"
-)
 
-var gaugeMetrics = [...]string{
-	"Alloc",
-	"BuckHashSys",
-	"Frees",
-	"GCCPUFraction",
-	"GCSys",
-	"HeapAlloc",
-	"HeapIdle",
-	"HeapInuse",
-	"HeapObjects",
-	"HeapReleased",
-	"HeapSys",
-	"LastGC",
-	"Lookups",
-	"MCacheInuse",
-	"MCacheSys",
-	"MSpanInuse",
-	"MSpanSys",
-	"Mallocs",
-	"NextGC",
-	"NumForcedGC",
-	"NumGC",
-	"OtherSys",
-	"PauseTotalNs",
-	"StackInuse",
-	"StackSys",
-	"Sys",
-	"TotalAlloc",
-}
+	"github.com/go-resty/resty/v2"
+)
 
 type Service struct {
 	Client  *resty.Client
@@ -46,9 +19,50 @@ type Service struct {
 	Config  Config
 }
 
+func randomInt() int64 {
+	const maxInt = 1000000
+	nBig, err := rand.Int(rand.Reader, big.NewInt(maxInt))
+	if err != nil {
+		panic(err)
+	}
+	n := nBig.Int64()
+	return n
+}
+
 func (s *Service) updateMemStats() {
 	var memStats runtime.MemStats
 	runtime.ReadMemStats(&memStats)
+
+	var gaugeMetrics = [...]string{
+		"Alloc",
+		"BuckHashSys",
+		"Frees",
+		"GCCPUFraction",
+		"GCSys",
+		"HeapAlloc",
+		"HeapIdle",
+		"HeapInuse",
+		"HeapObjects",
+		"HeapReleased",
+		"HeapSys",
+		"LastGC",
+		"Lookups",
+		"MCacheInuse",
+		"MCacheSys",
+		"MSpanInuse",
+		"MSpanSys",
+		"Mallocs",
+		"NextGC",
+		"NumForcedGC",
+		"NumGC",
+		"OtherSys",
+		"PauseTotalNs",
+		"StackInuse",
+		"StackSys",
+		"Sys",
+		"TotalAlloc",
+	}
+
 	for _, v := range gaugeMetrics {
 		value := reflect.ValueOf(memStats).FieldByName(v)
 		var floatValue float64
@@ -67,11 +81,14 @@ func (s *Service) updateMemStats() {
 }
 
 func (s *Service) updateRandomValue() {
-	s.Storage.Gauge["RandomValue"] = rand.Float64()
+	n1 := randomInt()
+	n2 := randomInt()
+	randomFloat := float64(n1 / n2)
+	s.Storage.Gauge["RandomValue"] = randomFloat
 }
 
 func (s *Service) updatePollCount() {
-	s.Storage.Counter["PollCount"] += 1
+	s.Storage.Counter["PollCount"]++
 }
 
 func (s *Service) RunUpdateMetrics(wg *sync.WaitGroup) {
@@ -82,7 +99,7 @@ func (s *Service) RunUpdateMetrics(wg *sync.WaitGroup) {
 }
 
 func (s *Service) UpdateMetrics() {
-	fmt.Println("UpdateMetrics")
+	log.Println("UpdateMetrics")
 	s.updateMemStats()
 	s.updateRandomValue()
 	s.updatePollCount()
@@ -100,16 +117,16 @@ func (s *Service) SendMetrics() {
 		requestURL := fmt.Sprintf("http://%v/update/gauge/%v/%v", s.Config.Host, metric, value)
 		_, err := s.Client.R().Post(requestURL)
 		if err != nil {
-			fmt.Printf("error making http request: %s\n", err)
+			log.Printf("error making http request: %s\n", err)
 		}
 	}
 	for metric, value := range s.Storage.Counter {
 		requestURL := fmt.Sprintf("http://%v/update/counter/%v/%v", s.Config.Host, metric, value)
 		_, err := s.Client.R().Post(requestURL)
 		if err != nil {
-			fmt.Printf("error making http request: %s\n", err)
+			log.Printf("error making http request: %s\n", err)
 		}
 	}
-	fmt.Println("Send Gauge ", s.Storage.Gauge)
-	fmt.Println("Send Counter ", s.Storage.Counter)
+	log.Println("Send Gauge ", s.Storage.Gauge)
+	log.Println("Send Counter ", s.Storage.Counter)
 }

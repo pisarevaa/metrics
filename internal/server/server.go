@@ -2,19 +2,21 @@ package server
 
 import (
 	"fmt"
-	"github.com/go-chi/chi/v5"
-	"github.com/pisarevaa/metrics/internal/storage"
 	"io"
+	"log"
 	"net/http"
+
+	"github.com/go-chi/chi/v5"
+
+	"github.com/pisarevaa/metrics/internal/storage"
 )
 
 type Server struct {
 	Storage *storage.MemStorage
-	Config Config
+	Config  Config
 }
 
 func (s *Server) StoreMetrics(rw http.ResponseWriter, r *http.Request) {
-
 	metricType := chi.URLParam(r, "metricType")
 	metricName := chi.URLParam(r, "metricName")
 	metricValue := chi.URLParam(r, "metricValue")
@@ -38,13 +40,12 @@ func (s *Server) StoreMetrics(rw http.ResponseWriter, r *http.Request) {
 		http.Error(rw, err.Error(), http.StatusBadRequest)
 	}
 
-	fmt.Println("Got request ", r.URL.Path)
-	fmt.Println("Storage Gauge ", s.Storage.Gauge)
-	fmt.Println("Storage Counter ", s.Storage.Counter)
+	log.Println("Got request ", r.URL.Path)
+	log.Println("Storage Gauge ", s.Storage.Gauge)
+	log.Println("Storage Counter ", s.Storage.Counter)
 }
 
 func (s *Server) GetMetric(rw http.ResponseWriter, r *http.Request) {
-
 	metricType := chi.URLParam(r, "metricType")
 	metricName := chi.URLParam(r, "metricName")
 
@@ -56,18 +57,24 @@ func (s *Server) GetMetric(rw http.ResponseWriter, r *http.Request) {
 		http.Error(rw, "Empty metricName is not allowed!", http.StatusNotFound)
 		return
 	}
-	fmt.Println(metricType, metricName)
+	log.Println(metricType, metricName)
 	value, err := s.Storage.Get(metricType, metricName)
 	if err != nil {
 		http.Error(rw, err.Error(), http.StatusNotFound)
 	}
 
-	io.WriteString(rw, value)
+	_, errWtrite := io.WriteString(rw, value)
+	if errWtrite != nil {
+		panic(errWtrite)
+	}
 }
 
-func (s *Server) GetAllMetrics(rw http.ResponseWriter, r *http.Request) {
+func (s *Server) GetAllMetrics(rw http.ResponseWriter, _ *http.Request) {
 	metrics := s.Storage.GetAll()
 	for key, value := range metrics {
-		io.WriteString(rw, fmt.Sprintf("%v: %v\n", key, value))
+		_, err := io.WriteString(rw, fmt.Sprintf("%v: %v\n", key, value))
+		if err != nil {
+			panic(err)
+		}
 	}
 }

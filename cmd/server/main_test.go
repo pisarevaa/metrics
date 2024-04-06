@@ -1,8 +1,6 @@
 package main
 
 import (
-	"fmt"
-	"github.com/pisarevaa/metrics/internal/server"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -10,10 +8,11 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/pisarevaa/metrics/internal/server"
 )
 
 func testRequest(t *testing.T, ts *httptest.Server, method, url string) (*http.Response, string) {
-	fmt.Println(ts.URL + url)
 	req, err := http.NewRequest(method, ts.URL+url, nil)
 	require.NoError(t, err)
 	resp, err := ts.Client().Do(req)
