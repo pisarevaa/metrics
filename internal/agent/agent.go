@@ -11,17 +11,17 @@ import (
 	"time"
 )
 
-func randomInt() int64 {
+func randomInt() (int64, error) {
 	const maxInt = 1000000
 	nBig, err := rand.Int(rand.Reader, big.NewInt(maxInt))
 	if err != nil {
-		panic(err)
+		return 0, err
 	}
 	n := nBig.Int64()
-	return n
+	return n, nil
 }
 
-func (s *Service) updateMemStats() {
+func (s *Service) updateMemStats() error {
 	var memStats runtime.MemStats
 	runtime.ReadMemStats(&memStats)
 
@@ -66,17 +66,25 @@ func (s *Service) updateMemStats() {
 		case reflect.Float64:
 			floatValue = value.Float()
 		default:
-			panic("not supported type")
+			return fmt.Errorf("not supported type: %v", value.Kind())
 		}
 		s.Storage.gauge[v] = floatValue
 	}
+	return nil
 }
 
-func (s *Service) updateRandomValue() {
-	n1 := randomInt()
-	n2 := randomInt()
+func (s *Service) updateRandomValue() error {
+	n1, err1 := randomInt()
+	if err1 != nil {
+		return err1
+	}
+	n2, err2 := randomInt()
+	if err2 != nil {
+		return err2
+	}
 	randomFloat := float64(n1 / n2)
 	s.Storage.gauge["RandomValue"] = randomFloat
+	return nil
 }
 
 func (s *Service) updatePollCount() {
@@ -85,16 +93,34 @@ func (s *Service) updatePollCount() {
 
 func (s *Service) RunUpdateMetrics(wg *sync.WaitGroup) {
 	defer wg.Done()
-	for range time.Tick(time.Duration(s.Config.PollInterval) * time.Second) {
-		s.UpdateMetrics()
+	ticker := time.NewTicker(time.Duration(s.Config.PollInterval) * time.Second)
+	stop := make(chan bool, 1)
+	for {
+		select {
+		case <-ticker.C:
+			err := s.UpdateMetrics()
+			if err != nil {
+				log.Println("error to update metrics:", err)
+				stop <- true
+			}
+		case <-stop:
+			return
+		}
 	}
 }
 
-func (s *Service) UpdateMetrics() {
+func (s *Service) UpdateMetrics() error {
 	log.Println("UpdateMetrics")
-	s.updateMemStats()
-	s.updateRandomValue()
+	updateMemStatsError := s.updateMemStats()
+	if updateMemStatsError != nil {
+		return updateMemStatsError
+	}
+	updateRandomValueError := s.updateRandomValue()
+	if updateRandomValueError != nil {
+		return updateRandomValueError
+	}
 	s.updatePollCount()
+	return nil
 }
 
 func (s *Service) RunSendMetrics(wg *sync.WaitGroup) {
@@ -119,6 +145,6 @@ func (s *Service) SendMetrics() {
 			log.Printf("error making http request: %s\n", err)
 		}
 	}
-	log.Println("Send Gauge ", s.Storage.gauge)
-	log.Println("Send Counter ", s.Storage.counter)
+	log.Println("Send Gauge", s.Storage.gauge)
+	log.Println("Send Counter", s.Storage.counter)
 }

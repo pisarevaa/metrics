@@ -24,4 +24,3 @@ lint:
 coverage_report:
 	go test -coverpkg=./... -count=1 -coverprofile=.coverage.out ./...
 	go tool cover -html .coverage.out -o .coverage.html
-	open ./.coverage.html

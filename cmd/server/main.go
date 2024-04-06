@@ -24,8 +24,5 @@ func main() {
 		ReadTimeout:  readTimeout * time.Second,
 		WriteTimeout: writeTimout * time.Second,
 	}
-	err := srv.ListenAndServe()
-	if err != nil {
-		panic(err)
-	}
+	log.Fatal(srv.ListenAndServe())
 }

@@ -2,6 +2,7 @@ package agent
 
 import (
 	"flag"
+	"log"
 
 	"github.com/caarlos0/env/v6"
 )
@@ -20,13 +21,13 @@ func GetConfig() Config {
 	flag.IntVar(&config.ReportInterval, "r", 10, "frequency of polling metrics from the runtime package")
 	flag.Parse()
 	if len(flag.Args()) > 0 {
-		panic("used not declared arguments")
+		log.Fatal("used not declared arguments")
 	}
 
 	var envConfig Config
 	err := env.Parse(&envConfig)
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 	if envConfig.Host != "" {
 		config.Host = envConfig.Host

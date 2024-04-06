@@ -71,7 +71,8 @@ func (s *Handler) GetMetric(rw http.ResponseWriter, r *http.Request) {
 
 	_, errWtrite := io.WriteString(rw, value)
 	if errWtrite != nil {
-		panic(errWtrite)
+		http.Error(rw, errWtrite.Error(), http.StatusBadRequest)
+		return
 	}
 }
 
@@ -80,7 +81,8 @@ func (s *Handler) GetAllMetrics(rw http.ResponseWriter, _ *http.Request) {
 	for key, value := range metrics {
 		_, err := io.WriteString(rw, fmt.Sprintf("%v: %v\n", key, value))
 		if err != nil {
-			panic(err)
+			http.Error(rw, err.Error(), http.StatusBadRequest)
+			return
 		}
 	}
 }
