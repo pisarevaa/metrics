@@ -1,4 +1,4 @@
-package storage
+package server
 
 import (
 	"errors"
@@ -18,7 +18,7 @@ func NewMemStorageRepo() *MemStorage {
 }
 
 func (ms *MemStorage) Store(metricType, metricName, metricValue string) error {
-	if metricType == "gauge" {
+	if metricType == gauge {
 		floatValue, err := strconv.ParseFloat(metricValue, 64)
 		if err != nil {
 			return errors.New("metricValue is not corect float")
@@ -36,7 +36,7 @@ func (ms *MemStorage) Store(metricType, metricName, metricValue string) error {
 }
 
 func (ms *MemStorage) Get(metricType, metricName string) (string, error) {
-	if metricType == "gauge" {
+	if metricType == gauge {
 		value, ok := ms.gauge[metricName]
 		if !ok {
 			return "", errors.New("metric is not found")

@@ -7,16 +7,17 @@ import (
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
-
-	"github.com/pisarevaa/metrics/internal/storage"
 )
 
 type Handler struct {
-	Storage *storage.MemStorage
+	Storage *MemStorage
 	Config  Config
 }
 
-func NewHandler(storage *storage.MemStorage, config Config) *Handler {
+const gauge = "gauge"
+const counter = "counter"
+
+func NewHandler(storage *MemStorage, config Config) *Handler {
 	return &Handler{
 		Storage: storage,
 		Config:  config,
@@ -28,7 +29,7 @@ func (s *Handler) StoreMetrics(rw http.ResponseWriter, r *http.Request) {
 	metricName := chi.URLParam(r, "metricName")
 	metricValue := chi.URLParam(r, "metricValue")
 
-	if !(metricType == "gauge" || metricType == "counter") {
+	if !(metricType == gauge || metricType == counter) {
 		http.Error(rw, "Only 'gauge' and 'counter' values are not allowed!", http.StatusBadRequest)
 		return
 	}
@@ -55,7 +56,7 @@ func (s *Handler) GetMetric(rw http.ResponseWriter, r *http.Request) {
 	metricType := chi.URLParam(r, "metricType")
 	metricName := chi.URLParam(r, "metricName")
 
-	if !(metricType == "gauge" || metricType == "counter") {
+	if !(metricType == gauge || metricType == counter) {
 		http.Error(rw, "Only 'gauge' and 'counter' values are not allowed!", http.StatusBadRequest)
 		return
 	}
