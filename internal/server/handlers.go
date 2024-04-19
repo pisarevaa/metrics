@@ -5,23 +5,52 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"time"
 
 	"github.com/go-chi/chi/v5"
+	"go.uber.org/zap"
 )
 
 type Handler struct {
 	Storage *MemStorage
 	Config  Config
+	Logger  *zap.SugaredLogger
 }
 
 const gauge = "gauge"
 const counter = "counter"
 
-func NewHandler(storage *MemStorage, config Config) *Handler {
+func NewHandler(storage *MemStorage, config Config, logger *zap.SugaredLogger) *Handler {
 	return &Handler{
 		Storage: storage,
 		Config:  config,
+		Logger:  logger,
 	}
+}
+
+func (s *Handler) HTTPLoggingMiddleware(h http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		start := time.Now()
+		uri := r.RequestURI
+		method := r.Method
+		responseData := &responseData{
+			status: 0,
+			size:   0,
+		}
+		lw := loggingResponseWriter{
+			ResponseWriter: w,
+			responseData:   responseData,
+		}
+		h.ServeHTTP(&lw, r)
+		duration := time.Since(start)
+		s.Logger.Infoln(
+			"uri", uri,
+			"method", method,
+			"status", responseData.status,
+			"duration", duration,
+			"size", responseData.size,
+		)
+	})
 }
 
 func (s *Handler) StoreMetrics(rw http.ResponseWriter, r *http.Request) {

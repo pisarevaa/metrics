@@ -3,7 +3,6 @@ package agent
 import (
 	"crypto/rand"
 	"fmt"
-	"log"
 	"math/big"
 	"reflect"
 	"runtime"
@@ -100,7 +99,7 @@ func (s *Service) RunUpdateMetrics(wg *sync.WaitGroup) {
 		case <-ticker.C:
 			err := s.UpdateMetrics()
 			if err != nil {
-				log.Println("error to update metrics:", err)
+				s.Logger.Info("error to update metrics:", err)
 				stop <- true
 			}
 		case <-stop:
@@ -110,7 +109,7 @@ func (s *Service) RunUpdateMetrics(wg *sync.WaitGroup) {
 }
 
 func (s *Service) UpdateMetrics() error {
-	log.Println("UpdateMetrics")
+	s.Logger.Info("UpdateMetrics")
 	updateMemStatsError := s.updateMemStats()
 	if updateMemStatsError != nil {
 		return updateMemStatsError
@@ -135,16 +134,16 @@ func (s *Service) SendMetrics() {
 		requestURL := fmt.Sprintf("http://%v/update/gauge/%v/%v", s.Config.Host, metric, value)
 		_, err := s.Client.R().Post(requestURL)
 		if err != nil {
-			log.Printf("error making http request: %s\n", err)
+			s.Logger.Info("error making http request: %s\n", err)
 		}
 	}
 	for metric, value := range s.Storage.counter {
 		requestURL := fmt.Sprintf("http://%v/update/counter/%v/%v", s.Config.Host, metric, value)
 		_, err := s.Client.R().Post(requestURL)
 		if err != nil {
-			log.Printf("error making http request: %s\n", err)
+			s.Logger.Info("error making http request: %s\n", err)
 		}
 	}
-	log.Println("Send Gauge", s.Storage.gauge)
-	log.Println("Send Counter", s.Storage.counter)
+	s.Logger.Info("Send Gauge", s.Storage.gauge)
+	s.Logger.Info("Send Counter", s.Storage.counter)
 }

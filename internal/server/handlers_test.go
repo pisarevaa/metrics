@@ -25,7 +25,8 @@ func testRequest(t *testing.T, ts *httptest.Server, method, url string) (*http.R
 
 func TestServerSaveLogs(t *testing.T) {
 	config := server.GetConfig()
-	ts := httptest.NewServer(server.MetricsRouter(config))
+	logger := server.GetLogger()
+	ts := httptest.NewServer(server.MetricsRouter(config, logger))
 	defer ts.Close()
 
 	type want struct {
