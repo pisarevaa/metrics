@@ -7,7 +7,6 @@ import (
 	"io"
 	"net/http"
 	"strconv"
-	"time"
 
 	"github.com/go-chi/chi/v5"
 	"go.uber.org/zap"
@@ -42,46 +41,21 @@ func NewHandler(storage *MemStorage, config Config, logger *zap.SugaredLogger) *
 	}
 }
 
-func (s *Handler) HTTPLoggingMiddleware(h http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		start := time.Now()
-		uri := r.RequestURI
-		method := r.Method
-		responseData := &responseData{
-			status: 0,
-			size:   0,
-		}
-		lw := loggingResponseWriter{
-			ResponseWriter: w,
-			responseData:   responseData,
-		}
-		h.ServeHTTP(&lw, r)
-		duration := time.Since(start)
-		s.Logger.Infoln(
-			"uri", uri,
-			"method", method,
-			"status", responseData.status,
-			"duration", duration,
-			"size", responseData.size,
-		)
-	})
-}
-
-func (s *Handler) StoreMetrics(rw http.ResponseWriter, r *http.Request) {
+func (s *Handler) StoreMetrics(w http.ResponseWriter, r *http.Request) {
 	metricType := chi.URLParam(r, "metricType")
 	metricName := chi.URLParam(r, "metricName")
 	metricValue := chi.URLParam(r, "metricValue")
 
 	if !(metricType == gauge || metricType == counter) {
-		http.Error(rw, "Only 'gauge' and 'counter' values are not allowed!", http.StatusBadRequest)
+		http.Error(w, "Only 'gauge' and 'counter' values are not allowed!", http.StatusBadRequest)
 		return
 	}
 	if metricName == "" {
-		http.Error(rw, "Empty metricName is not allowed!", http.StatusNotFound)
+		http.Error(w, "Empty metricName is not allowed!", http.StatusNotFound)
 		return
 	}
 	if metricValue == "" || metricValue == "none" {
-		http.Error(rw, "Empty metricValue is not allowed!", http.StatusBadRequest)
+		http.Error(w, "Empty metricValue is not allowed!", http.StatusBadRequest)
 		return
 	}
 
@@ -93,7 +67,7 @@ func (s *Handler) StoreMetrics(rw http.ResponseWriter, r *http.Request) {
 	if metricType == gauge {
 		floatValue, err := strconv.ParseFloat(metricValue, 64)
 		if err != nil {
-			http.Error(rw, "metricValue is not corect float", http.StatusBadRequest)
+			http.Error(w, "metricValue is not corect float", http.StatusBadRequest)
 			return
 		}
 		metric.Value = &floatValue
@@ -101,7 +75,7 @@ func (s *Handler) StoreMetrics(rw http.ResponseWriter, r *http.Request) {
 	if metricType == counter {
 		intValue, err := strconv.ParseInt(metricValue, 10, 64)
 		if err != nil {
-			http.Error(rw, "metricValue is not correct integer", http.StatusBadRequest)
+			http.Error(w, "metricValue is not correct integer", http.StatusBadRequest)
 			return
 		}
 		metric.Delta = &intValue
@@ -111,36 +85,38 @@ func (s *Handler) StoreMetrics(rw http.ResponseWriter, r *http.Request) {
 
 	s.Logger.Info("Got request ", r.URL.Path)
 	s.Logger.Info("Storage ", s.Storage.GetAll())
-	rw.WriteHeader(http.StatusOK)
+
+	w.Header().Set("Content-Type", "text/html")
+	w.WriteHeader(http.StatusOK)
 }
 
-func (s *Handler) StoreMetricsJSON(rw http.ResponseWriter, r *http.Request) {
+func (s *Handler) StoreMetricsJSON(w http.ResponseWriter, r *http.Request) {
 	var metric Metrics
 	var buf bytes.Buffer
 	_, err := buf.ReadFrom(r.Body)
 	if err != nil {
-		http.Error(rw, err.Error(), http.StatusBadRequest)
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 	if err = json.Unmarshal(buf.Bytes(), &metric); err != nil {
-		http.Error(rw, err.Error(), http.StatusBadRequest)
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
 	if !(metric.MType == gauge || metric.MType == counter) {
-		http.Error(rw, "Only 'gauge' and 'counter' values are allowed!", http.StatusBadRequest)
+		http.Error(w, "Only 'gauge' and 'counter' values are allowed!", http.StatusBadRequest)
 		return
 	}
 	if metric.ID == "" {
-		http.Error(rw, "Empty metric id is not allowed!", http.StatusNotFound)
+		http.Error(w, "Empty metric id is not allowed!", http.StatusNotFound)
 		return
 	}
 	if metric.MType == gauge && metric.Value == nil {
-		http.Error(rw, "Empty metric Value is not allowed!", http.StatusBadRequest)
+		http.Error(w, "Empty metric Value is not allowed!", http.StatusBadRequest)
 		return
 	}
 	if metric.MType == counter && metric.Delta == nil {
-		http.Error(rw, "Empty metric Delta is not allowed!", http.StatusBadRequest)
+		http.Error(w, "Empty metric Delta is not allowed!", http.StatusBadRequest)
 		return
 	}
 
@@ -153,33 +129,33 @@ func (s *Handler) StoreMetricsJSON(rw http.ResponseWriter, r *http.Request) {
 		Value: &value,
 	})
 	if err != nil {
-		http.Error(rw, err.Error(), http.StatusInternalServerError)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	_, err = rw.Write(resp)
+	_, err = w.Write(resp)
 	if err != nil {
-		http.Error(rw, err.Error(), http.StatusBadRequest)
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
 	s.Logger.Info("Got request ", r.URL.Path)
 	s.Logger.Info("Storage ", s.Storage.GetAll())
 
-	rw.Header().Set("Content-Type", "application/json")
-	rw.WriteHeader(http.StatusOK)
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
 }
 
-func (s *Handler) GetMetric(rw http.ResponseWriter, r *http.Request) {
+func (s *Handler) GetMetric(w http.ResponseWriter, r *http.Request) {
 	metricType := chi.URLParam(r, "metricType")
 	metricName := chi.URLParam(r, "metricName")
 
 	if !(metricType == gauge || metricType == counter) {
-		http.Error(rw, "Only 'gauge' and 'counter' values are allowed!", http.StatusBadRequest)
+		http.Error(w, "Only 'gauge' and 'counter' values are allowed!", http.StatusBadRequest)
 		return
 	}
 	if metricName == "" {
-		http.Error(rw, "Empty metricName is not allowed!", http.StatusNotFound)
+		http.Error(w, "Empty metricName is not allowed!", http.StatusNotFound)
 		return
 	}
 	s.Logger.Info(metricType, metricName)
@@ -191,54 +167,55 @@ func (s *Handler) GetMetric(rw http.ResponseWriter, r *http.Request) {
 
 	value, delta, err := s.Storage.Get(query)
 	if err != nil {
-		http.Error(rw, err.Error(), http.StatusNotFound)
+		http.Error(w, err.Error(), http.StatusNotFound)
 	}
 
 	if metricType == gauge && value != nil {
 		valueString := strconv.FormatFloat(*value, 'f', -1, 64)
-		_, errWtrite := io.WriteString(rw, valueString)
+		_, errWtrite := io.WriteString(w, valueString)
 		if errWtrite != nil {
-			http.Error(rw, errWtrite.Error(), http.StatusBadRequest)
+			http.Error(w, errWtrite.Error(), http.StatusBadRequest)
 			return
 		}
 	}
 	if metricType == counter && delta != nil {
 		valueString := strconv.FormatInt(*delta, 10)
-		_, errWtrite := io.WriteString(rw, valueString)
+		_, errWtrite := io.WriteString(w, valueString)
 		if errWtrite != nil {
-			http.Error(rw, errWtrite.Error(), http.StatusBadRequest)
+			http.Error(w, errWtrite.Error(), http.StatusBadRequest)
 			return
 		}
 	}
-	rw.WriteHeader(http.StatusOK)
+	w.Header().Set("Content-Type", "text/html")
+	w.WriteHeader(http.StatusOK)
 }
 
-func (s *Handler) GetMetricJSON(rw http.ResponseWriter, r *http.Request) {
+func (s *Handler) GetMetricJSON(w http.ResponseWriter, r *http.Request) {
 	var query QueryMetrics
 	var buf bytes.Buffer
 	_, err := buf.ReadFrom(r.Body)
 	if err != nil {
-		http.Error(rw, err.Error(), http.StatusBadRequest)
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 	if err = json.Unmarshal(buf.Bytes(), &query); err != nil {
-		http.Error(rw, err.Error(), http.StatusBadRequest)
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
 	if !(query.MType == gauge || query.MType == counter) {
-		http.Error(rw, "Only 'gauge' and 'counter' values are not allowed!", http.StatusBadRequest)
+		http.Error(w, "Only 'gauge' and 'counter' values are not allowed!", http.StatusBadRequest)
 		return
 	}
 	if query.ID == "" {
-		http.Error(rw, "Empty metricName is not allowed!", http.StatusNotFound)
+		http.Error(w, "Empty metricName is not allowed!", http.StatusNotFound)
 		return
 	}
 	s.Logger.Info(query.MType, query.ID)
 
 	value, delta, err := s.Storage.Get(query)
 	if err != nil {
-		http.Error(rw, err.Error(), http.StatusNotFound)
+		http.Error(w, err.Error(), http.StatusNotFound)
 	}
 
 	resp, err := json.Marshal(Metrics{
@@ -248,25 +225,25 @@ func (s *Handler) GetMetricJSON(rw http.ResponseWriter, r *http.Request) {
 		Value: value,
 	})
 	if err != nil {
-		http.Error(rw, err.Error(), http.StatusInternalServerError)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	rw.Header().Set("Content-Type", "application/json")
-	rw.WriteHeader(http.StatusOK)
-	_, err = rw.Write(resp)
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	_, err = w.Write(resp)
 	if err != nil {
-		http.Error(rw, err.Error(), http.StatusBadRequest)
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 }
 
-func (s *Handler) GetAllMetrics(rw http.ResponseWriter, _ *http.Request) {
+func (s *Handler) GetAllMetrics(w http.ResponseWriter, _ *http.Request) {
 	metrics := s.Storage.GetAll()
 	for key, value := range metrics {
-		_, err := io.WriteString(rw, fmt.Sprintf("%v: %v\n", key, value))
+		_, err := io.WriteString(w, fmt.Sprintf("%v: %v\n", key, value))
 		if err != nil {
-			http.Error(rw, err.Error(), http.StatusBadRequest)
+			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
 	}

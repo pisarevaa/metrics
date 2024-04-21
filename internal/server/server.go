@@ -10,6 +10,7 @@ func MetricsRouter(config Config, logger *zap.SugaredLogger) chi.Router {
 	srv := NewHandler(storage, config, logger)
 	r := chi.NewRouter()
 	r.Use(srv.HTTPLoggingMiddleware)
+	r.Use(srv.GzipMiddleware)
 	r.Post("/update/{metricType}/{metricName}/{metricValue}", srv.StoreMetrics)
 	r.Post("/update/", srv.StoreMetricsJSON)
 	r.Get("/value/{metricType}/{metricName}", srv.GetMetric)

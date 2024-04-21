@@ -2,6 +2,7 @@ package server
 
 import (
 	"net/http"
+	"time"
 
 	"go.uber.org/zap"
 )
@@ -30,4 +31,29 @@ func (r *loggingResponseWriter) Write(b []byte) (int, error) {
 func (r *loggingResponseWriter) WriteHeader(statusCode int) {
 	r.ResponseWriter.WriteHeader(statusCode)
 	r.responseData.status = statusCode
+}
+
+func (s *Handler) HTTPLoggingMiddleware(h http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		start := time.Now()
+		uri := r.RequestURI
+		method := r.Method
+		responseData := &responseData{
+			status: 0,
+			size:   0,
+		}
+		lw := loggingResponseWriter{
+			ResponseWriter: w,
+			responseData:   responseData,
+		}
+		h.ServeHTTP(&lw, r)
+		duration := time.Since(start)
+		s.Logger.Infoln(
+			"uri", uri,
+			"method", method,
+			"status", responseData.status,
+			"duration", duration,
+			"size", responseData.size,
+		)
+	})
 }

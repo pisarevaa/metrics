@@ -2,6 +2,7 @@ package server_test
 
 import (
 	"bytes"
+	"compress/gzip"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -34,6 +35,7 @@ func testRequest(suite *ServerTestSuite, ts *httptest.Server, method, url, body 
 	req, err := http.NewRequest(method, ts.URL+url, bytes.NewBuffer(bytesString))
 	suite.Require().NoError(err)
 	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept-Encoding", "")
 	resp, err := ts.Client().Do(req)
 	suite.Require().NoError(err)
 	defer resp.Body.Close()
@@ -42,7 +44,44 @@ func testRequest(suite *ServerTestSuite, ts *httptest.Server, method, url, body 
 	return resp, string(respBody)
 }
 
-func (suite *ServerTestSuite) TestServerSaveLogs() {
+func testRequestWithGZIP(
+	suite *ServerTestSuite, ts *httptest.Server, method, url, body, contentEncoding, acceptEncoding string,
+) (*http.Response, string) {
+	bodyBytes := []byte(body)
+	var reqBody io.Reader
+	if contentEncoding == "gzip" {
+		buf := bytes.NewBuffer(nil)
+		zb := gzip.NewWriter(buf)
+		_, err := zb.Write(bodyBytes)
+		suite.Require().NoError(err)
+		err = zb.Close()
+		suite.Require().NoError(err)
+		reqBody = buf
+	} else {
+		reqBody = bytes.NewBuffer(bodyBytes)
+	}
+	req, err := http.NewRequest(method, ts.URL+url, reqBody)
+	suite.Require().NoError(err)
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Content-Encoding", contentEncoding)
+	req.Header.Set("Accept-Encoding", acceptEncoding)
+	resp, err := ts.Client().Do(req)
+	suite.Require().NoError(err)
+	defer resp.Body.Close()
+
+	if acceptEncoding == "gzip" {
+		zr, errReader := gzip.NewReader(resp.Body)
+		suite.Require().NoError(errReader)
+		b, errIo := io.ReadAll(zr)
+		suite.Require().NoError(errIo)
+		return resp, string(b)
+	}
+	respBody, err := io.ReadAll(resp.Body)
+	suite.Require().NoError(err)
+	return resp, string(respBody)
+}
+
+func (suite *ServerTestSuite) TestServerUpdateAndGetMetrics() {
 	ts := httptest.NewServer(server.MetricsRouter(suite.config, suite.logger))
 	defer ts.Close()
 
@@ -157,7 +196,7 @@ func (suite *ServerTestSuite) TestServerSaveLogs() {
 	}
 }
 
-func (suite *ServerTestSuite) TestServerSaveLogsJSON() {
+func (suite *ServerTestSuite) TestServerUpdateAndGetMetricsJSON() {
 	ts := httptest.NewServer(server.MetricsRouter(suite.config, suite.logger))
 	defer ts.Close()
 
@@ -264,6 +303,90 @@ func (suite *ServerTestSuite) TestServerSaveLogsJSON() {
 	}
 	for _, tt := range tests {
 		resp, body := testRequest(suite, ts, tt.method, tt.url, tt.body)
+		defer resp.Body.Close()
+		suite.Require().Equal(tt.want.statusCode, resp.StatusCode)
+		if tt.want.response != "" {
+			if tt.want.json {
+				suite.Require().JSONEq(tt.want.response, body)
+				suite.Require().Equal(tt.want.response, body)
+			}
+		}
+	}
+}
+
+func (suite *ServerTestSuite) TestServerUpdateAndGetMetricsWithGZIP() {
+	ts := httptest.NewServer(server.MetricsRouter(suite.config, suite.logger))
+	defer ts.Close()
+
+	type want struct {
+		statusCode int
+		json       bool
+		response   string
+	}
+	tests := []struct {
+		name            string
+		url             string
+		method          string
+		body            string
+		contentEncoding string
+		acceptEncoding  string
+		want            want
+	}{
+		{
+			name: "add gauge metric with gzip body",
+			want: want{
+				statusCode: 200,
+				json:       true,
+				response:   `{"id":"HeapAlloc","type":"gauge","delta":0,"value":1.25}`,
+			},
+			url:             "/update/",
+			body:            `{"id": "HeapAlloc", "type": "gauge", "value": 1.25}`,
+			method:          "POST",
+			contentEncoding: "gzip",
+			acceptEncoding:  "",
+		},
+		{
+			name: "add gauge metric with gzip return",
+			want: want{
+				statusCode: 200,
+				json:       true,
+				response:   `{"id":"HeapAlloc","type":"gauge","delta":0,"value":1.25}`,
+			},
+			url:             "/update/",
+			body:            `{"id": "HeapAlloc", "type": "gauge", "value": 1.25}`,
+			method:          "POST",
+			contentEncoding: "",
+			acceptEncoding:  "gzip",
+		},
+		{
+			name: "add gauge metric with gzip body and return",
+			want: want{
+				statusCode: 200,
+				json:       true,
+				response:   `{"id":"HeapAlloc","type":"gauge","delta":0,"value":1.25}`,
+			},
+			url:             "/update/",
+			body:            `{"id": "HeapAlloc", "type": "gauge", "value": 1.25}`,
+			method:          "POST",
+			contentEncoding: "gzip",
+			acceptEncoding:  "gzip",
+		},
+		{
+			name: "get gauge metric with gzip success",
+			want: want{
+				statusCode: 200,
+				json:       true,
+				response:   `{"id":"HeapAlloc","type":"gauge","value":1.25}`,
+			},
+			url:             "/value/",
+			body:            `{"id": "HeapAlloc", "type": "gauge"}`,
+			method:          "POST",
+			contentEncoding: "",
+			acceptEncoding:  "gzip",
+		},
+	}
+	for _, tt := range tests {
+		resp, body := testRequestWithGZIP(suite, ts, tt.method, tt.url, tt.body, tt.contentEncoding, tt.acceptEncoding)
 		defer resp.Body.Close()
 		suite.Require().Equal(tt.want.statusCode, resp.StatusCode)
 		if tt.want.response != "" {

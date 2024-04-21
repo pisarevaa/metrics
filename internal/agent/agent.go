@@ -1,7 +1,10 @@
 package agent
 
 import (
+	"bytes"
+	"compress/gzip"
 	"crypto/rand"
+	"encoding/json"
 	"fmt"
 	"math/big"
 	"reflect"
@@ -106,7 +109,7 @@ func (s *Service) RunUpdateMetrics(wg *sync.WaitGroup) {
 		case <-ticker.C:
 			err := s.UpdateMetrics()
 			if err != nil {
-				s.Logger.Info("error to update metrics:", err)
+				s.Logger.Error("error to update metrics:", err)
 				stop <- true
 			}
 		case <-stop:
@@ -138,12 +141,25 @@ func (s *Service) RunSendMetrics(wg *sync.WaitGroup) {
 
 func (s *Service) makeHTTPRequest(payload Metrics) {
 	requestURL := fmt.Sprintf("http://%v/update/", s.Config.Host)
+	buf := bytes.NewBuffer(nil)
+	zb := gzip.NewWriter(buf)
+	payloadString, errJSON := json.Marshal(payload)
+	if errJSON != nil {
+		s.Logger.Error(errJSON)
+		return
+	}
+	_, errGzip := zb.Write(payloadString)
+	if errGzip != nil {
+		s.Logger.Error(errGzip)
+		return
+	}
 	_, err := s.Client.R().
 		SetHeader("Content-Type", "application/json").
-		SetBody(payload).
+		SetHeader("Content-Encoding", "gzip").
+		SetBody(buf).
 		Post(requestURL)
 	if err != nil {
-		s.Logger.Info("error making http request: ", err)
+		s.Logger.Error("error making http request: ", err)
 	}
 }
 
