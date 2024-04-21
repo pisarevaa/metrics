@@ -1,13 +1,13 @@
 package server
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"time"
 
-	"github.com/go-chi/chi/v5"
 	"go.uber.org/zap"
 )
 
@@ -15,6 +15,18 @@ type Handler struct {
 	Storage *MemStorage
 	Config  Config
 	Logger  *zap.SugaredLogger
+}
+
+type Metrics struct {
+	ID    string   `json:"id"`              // имя метрики
+	MType string   `json:"type"`            // параметр, принимающий значение gauge или counter
+	Delta *int64   `json:"delta,omitempty"` // значение метрики в случае передачи counter
+	Value *float64 `json:"value,omitempty"` // значение метрики в случае передачи gauge
+}
+
+type QueryMetrics struct {
+	ID    string `json:"id"`
+	MType string `json:"type"`
 }
 
 const gauge = "gauge"
@@ -54,54 +66,105 @@ func (s *Handler) HTTPLoggingMiddleware(h http.Handler) http.Handler {
 }
 
 func (s *Handler) StoreMetrics(rw http.ResponseWriter, r *http.Request) {
-	metricType := chi.URLParam(r, "metricType")
-	metricName := chi.URLParam(r, "metricName")
-	metricValue := chi.URLParam(r, "metricValue")
-
-	if !(metricType == gauge || metricType == counter) {
-		http.Error(rw, "Only 'gauge' and 'counter' values are not allowed!", http.StatusBadRequest)
-		return
-	}
-	if metricName == "" {
-		http.Error(rw, "Empty metricName is not allowed!", http.StatusNotFound)
-		return
-	}
-	if metricValue == "" || metricValue == "none" {
-		http.Error(rw, "Empty metricValue is not allowed!", http.StatusBadRequest)
-		return
-	}
-
-	err := s.Storage.Store(metricType, metricName, metricValue)
-
+	var metric Metrics
+	var buf bytes.Buffer
+	_, err := buf.ReadFrom(r.Body)
 	if err != nil {
 		http.Error(rw, err.Error(), http.StatusBadRequest)
+		return
+	}
+	if err = json.Unmarshal(buf.Bytes(), &metric); err != nil {
+		http.Error(rw, err.Error(), http.StatusBadRequest)
+		return
 	}
 
-	log.Println("Got request", r.URL.Path)
-	log.Println("Storage", s.Storage.GetAll())
+	if !(metric.MType == gauge || metric.MType == counter) {
+		http.Error(rw, "Only 'gauge' and 'counter' values are allowed!", http.StatusBadRequest)
+		return
+	}
+	if metric.ID == "" {
+		http.Error(rw, "Empty metric id is not allowed!", http.StatusNotFound)
+		return
+	}
+	if metric.MType == gauge && metric.Value == nil {
+		http.Error(rw, "Empty metric Value is not allowed!", http.StatusBadRequest)
+		return
+	}
+	if metric.MType == counter && metric.Delta == nil {
+		http.Error(rw, "Empty metric Delta is not allowed!", http.StatusBadRequest)
+		return
+	}
+
+	value, delta := s.Storage.Store(metric)
+
+	resp, err := json.Marshal(Metrics{
+		ID:    metric.ID,
+		MType: metric.MType,
+		Delta: &delta,
+		Value: &value,
+	})
+	if err != nil {
+		http.Error(rw, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	_, err = rw.Write(resp)
+	if err != nil {
+		http.Error(rw, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	s.Logger.Info("Got request ", r.URL.Path)
+	s.Logger.Info("Storage ", s.Storage.GetAll())
+
+	rw.Header().Set("Content-Type", "application/json")
+	rw.WriteHeader(http.StatusOK)
 }
 
 func (s *Handler) GetMetric(rw http.ResponseWriter, r *http.Request) {
-	metricType := chi.URLParam(r, "metricType")
-	metricName := chi.URLParam(r, "metricName")
+	var query QueryMetrics
+	var buf bytes.Buffer
+	_, err := buf.ReadFrom(r.Body)
+	if err != nil {
+		http.Error(rw, err.Error(), http.StatusBadRequest)
+		return
+	}
+	if err = json.Unmarshal(buf.Bytes(), &query); err != nil {
+		http.Error(rw, err.Error(), http.StatusBadRequest)
+		return
+	}
 
-	if !(metricType == gauge || metricType == counter) {
+	if !(query.MType == gauge || query.MType == counter) {
 		http.Error(rw, "Only 'gauge' and 'counter' values are not allowed!", http.StatusBadRequest)
 		return
 	}
-	if metricName == "" {
+	if query.ID == "" {
 		http.Error(rw, "Empty metricName is not allowed!", http.StatusNotFound)
 		return
 	}
-	log.Println(metricType, metricName)
-	value, err := s.Storage.Get(metricType, metricName)
+	s.Logger.Info(query.MType, query.ID)
+
+	value, delta, err := s.Storage.Get(query)
 	if err != nil {
 		http.Error(rw, err.Error(), http.StatusNotFound)
 	}
 
-	_, errWtrite := io.WriteString(rw, value)
-	if errWtrite != nil {
-		http.Error(rw, errWtrite.Error(), http.StatusBadRequest)
+	resp, err := json.Marshal(Metrics{
+		ID:    query.ID,
+		MType: query.MType,
+		Delta: &delta,
+		Value: &value,
+	})
+	if err != nil {
+		http.Error(rw, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	rw.Header().Set("Content-Type", "application/json")
+	rw.WriteHeader(http.StatusOK)
+	_, err = rw.Write(resp)
+	if err != nil {
+		http.Error(rw, err.Error(), http.StatusBadRequest)
 		return
 	}
 }

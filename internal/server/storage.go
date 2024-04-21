@@ -17,42 +17,38 @@ func NewMemStorageRepo() *MemStorage {
 	}
 }
 
-func (ms *MemStorage) Store(metricType, metricName, metricValue string) error {
-	if metricType == gauge {
-		floatValue, err := strconv.ParseFloat(metricValue, 64)
-		if err != nil {
-			return errors.New("metricValue is not corect float")
+func (ms *MemStorage) Store(metric Metrics) (float64, int64) {
+	if metric.MType == gauge {
+		if metric.Value == nil {
+			ms.gauge[metric.ID] = 0.0
+		} else {
+			ms.gauge[metric.ID] = *metric.Value
 		}
-		ms.gauge[metricName] = floatValue
 	}
-	if metricType == "counter" {
-		intValue, err := strconv.ParseInt(metricValue, 10, 64)
-		if err != nil {
-			return errors.New("metricValue is not correct integer")
+	if metric.MType == counter {
+		if metric.Delta != nil {
+			ms.counter[metric.ID] += *metric.Delta
 		}
-		ms.counter[metricName] += intValue
 	}
-	return nil
+	return ms.gauge[metric.ID], ms.counter[metric.ID]
 }
 
-func (ms *MemStorage) Get(metricType, metricName string) (string, error) {
-	if metricType == gauge {
-		value, ok := ms.gauge[metricName]
+func (ms *MemStorage) Get(query QueryMetrics) (float64, int64, error) {
+	if query.MType == gauge {
+		value, ok := ms.gauge[query.ID]
 		if !ok {
-			return "", errors.New("metric is not found")
+			return 0.0, 0, errors.New("metric is not found")
 		}
-		return strconv.FormatFloat(value, 'f', -1, 64), nil
+		return value, 0, nil
 	}
-
-	if metricType == "counter" {
-		value, ok := ms.counter[metricName]
+	if query.MType == counter {
+		value, ok := ms.counter[query.ID]
 		if !ok {
-			return "", errors.New("metric is not found")
+			return 0.0, 0, errors.New("metric is not found")
 		}
-		return strconv.FormatInt(value, 10), nil
+		return 0.0, value, nil
 	}
-
-	return "", errors.New("not handled metricType")
+	return 0.0, 0, errors.New("not handled metricType")
 }
 
 func (ms *MemStorage) GetAll() map[string]string {

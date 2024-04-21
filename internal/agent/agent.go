@@ -10,6 +10,13 @@ import (
 	"time"
 )
 
+type Metrics struct {
+	ID    string   `json:"id"`              // имя метрики
+	MType string   `json:"type"`            // параметр, принимающий значение gauge или counter
+	Delta *int64   `json:"delta,omitempty"` // значение метрики в случае передачи counter
+	Value *float64 `json:"value,omitempty"` // значение метрики в случае передачи gauge
+}
+
 func randomInt() (int64, error) {
 	const maxInt = 1000000
 	nBig, err := rand.Int(rand.Reader, big.NewInt(maxInt))
@@ -129,20 +136,33 @@ func (s *Service) RunSendMetrics(wg *sync.WaitGroup) {
 	}
 }
 
+func (s *Service) makeHTTPRequest(payload Metrics) {
+	requestURL := fmt.Sprintf("http://%v/update/", s.Config.Host)
+	_, err := s.Client.R().
+		SetHeader("Content-Type", "application/json").
+		SetBody(payload).
+		Post(requestURL)
+	if err != nil {
+		s.Logger.Info("error making http request: ", err)
+	}
+}
+
 func (s *Service) SendMetrics() {
 	for metric, value := range s.Storage.gauge {
-		requestURL := fmt.Sprintf("http://%v/update/gauge/%v/%v", s.Config.Host, metric, value)
-		_, err := s.Client.R().Post(requestURL)
-		if err != nil {
-			s.Logger.Info("error making http request: %s\n", err)
+		payload := Metrics{
+			ID:    metric,
+			MType: "gauge",
+			Value: &value, // #nosec G601 - проблема ичезнет в go 1.22
 		}
+		s.makeHTTPRequest(payload)
 	}
 	for metric, value := range s.Storage.counter {
-		requestURL := fmt.Sprintf("http://%v/update/counter/%v/%v", s.Config.Host, metric, value)
-		_, err := s.Client.R().Post(requestURL)
-		if err != nil {
-			s.Logger.Info("error making http request: %s\n", err)
+		payload := Metrics{
+			ID:    metric,
+			MType: "counter",
+			Delta: &value, // #nosec G601 - проблема ичезнет в go 1.22
 		}
+		s.makeHTTPRequest(payload)
 	}
 	s.Logger.Info("Send Gauge", s.Storage.gauge)
 	s.Logger.Info("Send Counter", s.Storage.counter)
