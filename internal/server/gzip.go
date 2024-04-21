@@ -85,7 +85,6 @@ func (s *Handler) GzipMiddleware(h http.Handler) http.Handler {
 				w.WriteHeader(http.StatusInternalServerError)
 				return
 			}
-			// меняем тело запроса на новое
 			r.Body = cr
 			defer cr.Close()
 		}

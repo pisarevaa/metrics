@@ -153,6 +153,11 @@ func (s *Service) makeHTTPRequest(payload Metrics) {
 		s.Logger.Error(errGzip)
 		return
 	}
+	errZb := zb.Close()
+	if errZb != nil {
+		s.Logger.Error(errZb)
+		return
+	}
 	_, err := s.Client.R().
 		SetHeader("Content-Type", "application/json").
 		SetHeader("Content-Encoding", "gzip").
