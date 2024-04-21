@@ -6,8 +6,10 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strconv"
 	"time"
 
+	"github.com/go-chi/chi/v5"
 	"go.uber.org/zap"
 )
 
@@ -66,6 +68,53 @@ func (s *Handler) HTTPLoggingMiddleware(h http.Handler) http.Handler {
 }
 
 func (s *Handler) StoreMetrics(rw http.ResponseWriter, r *http.Request) {
+	metricType := chi.URLParam(r, "metricType")
+	metricName := chi.URLParam(r, "metricName")
+	metricValue := chi.URLParam(r, "metricValue")
+
+	if !(metricType == gauge || metricType == counter) {
+		http.Error(rw, "Only 'gauge' and 'counter' values are not allowed!", http.StatusBadRequest)
+		return
+	}
+	if metricName == "" {
+		http.Error(rw, "Empty metricName is not allowed!", http.StatusNotFound)
+		return
+	}
+	if metricValue == "" || metricValue == "none" {
+		http.Error(rw, "Empty metricValue is not allowed!", http.StatusBadRequest)
+		return
+	}
+
+	metric := Metrics{
+		ID:    metricName,
+		MType: metricType,
+	}
+
+	if metricType == gauge {
+		floatValue, err := strconv.ParseFloat(metricValue, 64)
+		if err != nil {
+			http.Error(rw, "metricValue is not corect float", http.StatusBadRequest)
+			return
+		}
+		metric.Value = &floatValue
+	}
+	if metricType == counter {
+		intValue, err := strconv.ParseInt(metricValue, 10, 64)
+		if err != nil {
+			http.Error(rw, "metricValue is not correct integer", http.StatusBadRequest)
+			return
+		}
+		metric.Delta = &intValue
+	}
+
+	s.Storage.Store(metric)
+
+	s.Logger.Info("Got request ", r.URL.Path)
+	s.Logger.Info("Storage ", s.Storage.GetAll())
+	rw.WriteHeader(http.StatusOK)
+}
+
+func (s *Handler) StoreMetricsJSON(rw http.ResponseWriter, r *http.Request) {
 	var metric Metrics
 	var buf bytes.Buffer
 	_, err := buf.ReadFrom(r.Body)
@@ -122,6 +171,49 @@ func (s *Handler) StoreMetrics(rw http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Handler) GetMetric(rw http.ResponseWriter, r *http.Request) {
+	metricType := chi.URLParam(r, "metricType")
+	metricName := chi.URLParam(r, "metricName")
+
+	if !(metricType == gauge || metricType == counter) {
+		http.Error(rw, "Only 'gauge' and 'counter' values are allowed!", http.StatusBadRequest)
+		return
+	}
+	if metricName == "" {
+		http.Error(rw, "Empty metricName is not allowed!", http.StatusNotFound)
+		return
+	}
+	s.Logger.Info(metricType, metricName)
+
+	query := QueryMetrics{
+		ID:    metricName,
+		MType: metricType,
+	}
+
+	value, delta, err := s.Storage.Get(query)
+	if err != nil {
+		http.Error(rw, err.Error(), http.StatusNotFound)
+	}
+
+	if metricType == gauge {
+		valueString := strconv.FormatFloat(value, 'f', -1, 64)
+		_, errWtrite := io.WriteString(rw, valueString)
+		if errWtrite != nil {
+			http.Error(rw, errWtrite.Error(), http.StatusBadRequest)
+			return
+		}
+	}
+	if metricType == counter {
+		valueString := strconv.FormatInt(delta, 10)
+		_, errWtrite := io.WriteString(rw, valueString)
+		if errWtrite != nil {
+			http.Error(rw, errWtrite.Error(), http.StatusBadRequest)
+			return
+		}
+	}
+	rw.WriteHeader(http.StatusOK)
+}
+
+func (s *Handler) GetMetricJSON(rw http.ResponseWriter, r *http.Request) {
 	var query QueryMetrics
 	var buf bytes.Buffer
 	_, err := buf.ReadFrom(r.Body)

@@ -7,29 +7,158 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
+	"go.uber.org/zap"
+
+	"github.com/stretchr/testify/suite"
 
 	"github.com/pisarevaa/metrics/internal/server"
 )
 
-func testRequest(t *testing.T, ts *httptest.Server, method, url, body string) (*http.Response, string) {
+type ServerTestSuite struct {
+	suite.Suite
+	config server.Config
+	logger *zap.SugaredLogger
+}
+
+func (suite *ServerTestSuite) SetupSuite() {
+	suite.config = server.GetConfig()
+	suite.logger = server.GetLogger()
+}
+
+func TestAgentSuite(t *testing.T) {
+	suite.Run(t, new(ServerTestSuite))
+}
+
+func testRequest(suite *ServerTestSuite, ts *httptest.Server, method, url, body string) (*http.Response, string) {
 	bytesString := []byte(body)
 	req, err := http.NewRequest(method, ts.URL+url, bytes.NewBuffer(bytesString))
-	require.NoError(t, err)
+	suite.Require().NoError(err)
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := ts.Client().Do(req)
-	require.NoError(t, err)
+	suite.Require().NoError(err)
 	defer resp.Body.Close()
 	respBody, err := io.ReadAll(resp.Body)
-	require.NoError(t, err)
+	suite.Require().NoError(err)
 	return resp, string(respBody)
 }
 
-func TestServerSaveLogs(t *testing.T) {
-	config := server.GetConfig()
-	logger := server.GetLogger()
-	ts := httptest.NewServer(server.MetricsRouter(config, logger))
+func (suite *ServerTestSuite) TestServerSaveLogs() {
+	ts := httptest.NewServer(server.MetricsRouter(suite.config, suite.logger))
+	defer ts.Close()
+
+	type want struct {
+		statusCode int
+		json       bool
+		response   string
+	}
+	tests := []struct {
+		name   string
+		url    string
+		method string
+		body   string
+		want   want
+	}{
+		{
+			name: "add gauge metric success",
+			want: want{
+				statusCode: 200,
+				json:       false,
+				response:   "",
+			},
+			url:    "/update/gauge/HeapAlloc/1.25",
+			body:   "",
+			method: "POST",
+		},
+		{
+			name: "add counter metric success",
+			want: want{
+				statusCode: 200,
+				json:       false,
+				response:   "",
+			},
+			url:    "/update/counter/PollCount/4",
+			body:   "",
+			method: "POST",
+		},
+		{
+			name: "add wrong metric type",
+			want: want{
+				statusCode: 400,
+				json:       false,
+				response:   "",
+			},
+			url:    "/update/test/HeapAlloc/1.25",
+			body:   "",
+			method: "POST",
+		},
+		{
+			name: "add empty metric value",
+			want: want{
+				statusCode: 404,
+				json:       false,
+				response:   "",
+			},
+			url:    "/update/counter/HeapAlloc/",
+			body:   "",
+			method: "POST",
+		},
+		{
+			name: "add wrong metric value",
+			want: want{
+				statusCode: 400,
+				json:       false,
+				response:   "",
+			},
+			url:    "/update/counter/HeapAlloc/test",
+			body:   "",
+			method: "POST",
+		},
+		{
+			name: "get gauge metric success",
+			want: want{
+				statusCode: 200,
+				json:       false,
+				response:   "1.25",
+			},
+			url:    "/value/gauge/HeapAlloc",
+			body:   "",
+			method: "GET",
+		},
+		{
+			name: "get not found metric",
+			want: want{
+				statusCode: 404,
+				json:       false,
+				response:   "",
+			},
+			url:    "/value/gauge/NotFound",
+			body:   "",
+			method: "GET",
+		},
+		{
+			name: "get all metrics success",
+			want: want{
+				statusCode: 200,
+				json:       false,
+				response:   "HeapAlloc: 1.25\nPollCount: 4\n",
+			},
+			url:    "/",
+			body:   "",
+			method: "GET",
+		},
+	}
+	for _, tt := range tests {
+		resp, body := testRequest(suite, ts, tt.method, tt.url, tt.body)
+		defer resp.Body.Close()
+		suite.Require().Equal(tt.want.statusCode, resp.StatusCode)
+		if tt.want.response != "" {
+			suite.Require().Equal(tt.want.response, body)
+		}
+	}
+}
+
+func (suite *ServerTestSuite) TestServerSaveLogsJSON() {
+	ts := httptest.NewServer(server.MetricsRouter(suite.config, suite.logger))
 	defer ts.Close()
 
 	type want struct {
@@ -49,7 +178,7 @@ func TestServerSaveLogs(t *testing.T) {
 			want: want{
 				statusCode: 200,
 				json:       true,
-				response:   `{"id": "HeapAlloc", "type": "gauge", "value": 1.25, "delta": 0}`,
+				response:   `{"id":"HeapAlloc","type":"gauge","delta":0,"value":1.25}`,
 			},
 			url:    "/update/",
 			body:   `{"id": "HeapAlloc", "type": "gauge", "value": 1.25}`,
@@ -60,7 +189,7 @@ func TestServerSaveLogs(t *testing.T) {
 			want: want{
 				statusCode: 200,
 				json:       true,
-				response:   `{"id": "PollCount", "type": "counter", "value": 0, "delta": 4}`,
+				response:   `{"id":"PollCount","type":"counter","delta":4,"value":0}`,
 			},
 			url:    "/update/",
 			body:   `{"id": "PollCount", "type": "counter", "delta": 4}`,
@@ -74,7 +203,7 @@ func TestServerSaveLogs(t *testing.T) {
 				response:   "",
 			},
 			url:    "/update/",
-			body:   `{"id": "HeapAlloc", "type": "test", "value": 1.25}`,
+			body:   `{"id":"HeapAlloc","type":"test","value":1.25,"delta":0}`,
 			method: "POST",
 		},
 		{
@@ -104,7 +233,7 @@ func TestServerSaveLogs(t *testing.T) {
 			want: want{
 				statusCode: 200,
 				json:       true,
-				response:   `{"id": "HeapAlloc", "type": "gauge", "value": 1.25, "delta": 0}`,
+				response:   `{"id":"HeapAlloc","type":"gauge","delta":0,"value":1.25}`,
 			},
 			url:    "/value/",
 			body:   `{"id": "HeapAlloc", "type": "gauge"}`,
@@ -129,19 +258,18 @@ func TestServerSaveLogs(t *testing.T) {
 				response:   "HeapAlloc: 1.25\nPollCount: 4\n",
 			},
 			url:    "/",
-			body:   ``,
+			body:   "",
 			method: "GET",
 		},
 	}
 	for _, tt := range tests {
-		resp, body := testRequest(t, ts, tt.method, tt.url, tt.body)
+		resp, body := testRequest(suite, ts, tt.method, tt.url, tt.body)
 		defer resp.Body.Close()
-		assert.Equal(t, tt.want.statusCode, resp.StatusCode)
+		suite.Require().Equal(tt.want.statusCode, resp.StatusCode)
 		if tt.want.response != "" {
 			if tt.want.json {
-				assert.JSONEq(t, tt.want.response, body)
-			} else {
-				assert.Equal(t, tt.want.response, body)
+				suite.Require().JSONEq(tt.want.response, body)
+				suite.Require().Equal(tt.want.response, body)
 			}
 		}
 	}
