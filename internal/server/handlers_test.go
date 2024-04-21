@@ -237,7 +237,7 @@ func (suite *ServerTestSuite) TestServerSaveLogsJSON() {
 			},
 			url:    "/value/",
 			body:   `{"id": "HeapAlloc", "type": "gauge"}`,
-			method: "GET",
+			method: "POST",
 		},
 		{
 			name: "get not found metric",
@@ -248,7 +248,7 @@ func (suite *ServerTestSuite) TestServerSaveLogsJSON() {
 			},
 			url:    "/value/",
 			body:   `{"id": "NotFound", "type": "gauge"}`,
-			method: "GET",
+			method: "POST",
 		},
 		{
 			name: "get all metrics success",
