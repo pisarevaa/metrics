@@ -194,16 +194,16 @@ func (s *Handler) GetMetric(rw http.ResponseWriter, r *http.Request) {
 		http.Error(rw, err.Error(), http.StatusNotFound)
 	}
 
-	if metricType == gauge {
-		valueString := strconv.FormatFloat(value, 'f', -1, 64)
+	if metricType == gauge && value != nil {
+		valueString := strconv.FormatFloat(*value, 'f', -1, 64)
 		_, errWtrite := io.WriteString(rw, valueString)
 		if errWtrite != nil {
 			http.Error(rw, errWtrite.Error(), http.StatusBadRequest)
 			return
 		}
 	}
-	if metricType == counter {
-		valueString := strconv.FormatInt(delta, 10)
+	if metricType == counter && delta != nil {
+		valueString := strconv.FormatInt(*delta, 10)
 		_, errWtrite := io.WriteString(rw, valueString)
 		if errWtrite != nil {
 			http.Error(rw, errWtrite.Error(), http.StatusBadRequest)
@@ -244,8 +244,8 @@ func (s *Handler) GetMetricJSON(rw http.ResponseWriter, r *http.Request) {
 	resp, err := json.Marshal(Metrics{
 		ID:    query.ID,
 		MType: query.MType,
-		Delta: &delta,
-		Value: &value,
+		Delta: delta,
+		Value: value,
 	})
 	if err != nil {
 		http.Error(rw, err.Error(), http.StatusInternalServerError)

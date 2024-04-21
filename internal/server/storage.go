@@ -33,22 +33,22 @@ func (ms *MemStorage) Store(metric Metrics) (float64, int64) {
 	return ms.gauge[metric.ID], ms.counter[metric.ID]
 }
 
-func (ms *MemStorage) Get(query QueryMetrics) (float64, int64, error) {
+func (ms *MemStorage) Get(query QueryMetrics) (*float64, *int64, error) {
 	if query.MType == gauge {
 		value, ok := ms.gauge[query.ID]
 		if !ok {
-			return 0.0, 0, errors.New("metric is not found")
+			return nil, nil, errors.New("metric is not found")
 		}
-		return value, 0, nil
+		return &value, nil, nil
 	}
 	if query.MType == counter {
 		value, ok := ms.counter[query.ID]
 		if !ok {
-			return 0.0, 0, errors.New("metric is not found")
+			return nil, nil, errors.New("metric is not found")
 		}
-		return 0.0, value, nil
+		return nil, &value, nil
 	}
-	return 0.0, 0, errors.New("not handled metricType")
+	return nil, nil, errors.New("not handled metricType")
 }
 
 func (ms *MemStorage) GetAll() map[string]string {

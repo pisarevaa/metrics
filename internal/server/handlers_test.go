@@ -233,7 +233,7 @@ func (suite *ServerTestSuite) TestServerSaveLogsJSON() {
 			want: want{
 				statusCode: 200,
 				json:       true,
-				response:   `{"id":"HeapAlloc","type":"gauge","delta":0,"value":1.25}`,
+				response:   `{"id":"HeapAlloc","type":"gauge","value":1.25}`,
 			},
 			url:    "/value/",
 			body:   `{"id": "HeapAlloc", "type": "gauge"}`,
