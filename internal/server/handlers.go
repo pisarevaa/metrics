@@ -241,12 +241,13 @@ func (s *Handler) GetMetricJSON(w http.ResponseWriter, r *http.Request) {
 func (s *Handler) GetAllMetrics(w http.ResponseWriter, _ *http.Request) {
 	metrics := s.Storage.GetAll()
 	w.Header().Set("Content-Type", "text/html")
+	w.WriteHeader(http.StatusOK)
 	for key, value := range metrics {
-		_, err := io.WriteString(w, fmt.Sprintf("%v: %v\n", key, value))
+		row := fmt.Sprintf("%v: %v\n", key, value)
+		_, err := w.Write([]byte(row))
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
 	}
-	w.WriteHeader(http.StatusOK)
 }
