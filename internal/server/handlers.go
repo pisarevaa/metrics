@@ -240,7 +240,7 @@ func (s *Handler) GetMetricJSON(w http.ResponseWriter, r *http.Request) {
 
 func (s *Handler) GetAllMetrics(w http.ResponseWriter, _ *http.Request) {
 	metrics := s.Storage.GetAll()
-	w.Header().Set("Content-Type", "html/text")
+	w.Header().Set("Content-Type", "text/html")
 	for key, value := range metrics {
 		_, err := io.WriteString(w, fmt.Sprintf("%v: %v\n", key, value))
 		if err != nil {
