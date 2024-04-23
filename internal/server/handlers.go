@@ -240,7 +240,7 @@ func (s *Handler) GetMetricJSON(w http.ResponseWriter, r *http.Request) {
 
 func (s *Handler) GetAllMetrics(w http.ResponseWriter, _ *http.Request) {
 	metrics := s.Storage.GetAll()
-	w.Header().Set("Content-Type", "text/html")
+	w.Header().Set("Content-Type", "html/text")
 	w.WriteHeader(http.StatusOK)
 	for key, value := range metrics {
 		row := fmt.Sprintf("%v: %v\n", key, value)
