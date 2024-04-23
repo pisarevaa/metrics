@@ -247,6 +247,6 @@ func (s *Handler) GetAllMetrics(w http.ResponseWriter, _ *http.Request) {
 			return
 		}
 	}
-	// w.Header().Set("Content-Type", "text/html")
+	w.Header().Set("Content-Type", "text/html")
 	w.WriteHeader(http.StatusOK)
 }
