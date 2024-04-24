@@ -1,48 +1,90 @@
 package server
 
 import (
+	"encoding/json"
 	"errors"
+	"os"
 	"strconv"
 )
 
 type MemStorage struct {
-	gauge   map[string]float64
-	counter map[string]int64
+	Gauge   map[string]float64 `json:"gauge"`
+	Counter map[string]int64   `json:"counter"`
 }
 
 func NewMemStorageRepo() *MemStorage {
 	return &MemStorage{
-		gauge:   make(map[string]float64),
-		counter: make(map[string]int64),
+		Gauge:   make(map[string]float64),
+		Counter: make(map[string]int64),
 	}
 }
 
 func (ms *MemStorage) Store(metric Metrics) (float64, int64) {
 	if metric.MType == gauge {
 		if metric.Value == nil {
-			ms.gauge[metric.ID] = 0.0
+			ms.Gauge[metric.ID] = 0.0
 		} else {
-			ms.gauge[metric.ID] = *metric.Value
+			ms.Gauge[metric.ID] = *metric.Value
 		}
 	}
 	if metric.MType == counter {
 		if metric.Delta != nil {
-			ms.counter[metric.ID] += *metric.Delta
+			ms.Counter[metric.ID] += *metric.Delta
 		}
 	}
-	return ms.gauge[metric.ID], ms.counter[metric.ID]
+	return ms.Gauge[metric.ID], ms.Counter[metric.ID]
+}
+
+func (ms MemStorage) SaveToDosk(filename string) error {
+	if filename == "" {
+		return nil
+	}
+	file, err := os.OpenFile(filename, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0666)
+	if err != nil {
+		return err
+	}
+	encoder := json.NewEncoder(file)
+	err = encoder.Encode(&ms)
+	if err != nil {
+		return err
+	}
+	err = file.Close()
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (ms *MemStorage) LoadFromDosk(filename string) error {
+	if filename == "" {
+		return nil
+	}
+	file, err := os.OpenFile(filename, os.O_RDONLY|os.O_CREATE, 0666)
+	if err != nil {
+		return err
+	}
+	decoder := json.NewDecoder(file)
+	err = decoder.Decode(ms)
+	if err != nil {
+		return err
+	}
+	err = file.Close()
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (ms *MemStorage) Get(query QueryMetrics) (*float64, *int64, error) {
 	if query.MType == gauge {
-		value, ok := ms.gauge[query.ID]
+		value, ok := ms.Gauge[query.ID]
 		if !ok {
 			return nil, nil, errors.New("metric is not found")
 		}
 		return &value, nil, nil
 	}
 	if query.MType == counter {
-		value, ok := ms.counter[query.ID]
+		value, ok := ms.Counter[query.ID]
 		if !ok {
 			return nil, nil, errors.New("metric is not found")
 		}
@@ -53,10 +95,10 @@ func (ms *MemStorage) Get(query QueryMetrics) (*float64, *int64, error) {
 
 func (ms *MemStorage) GetAll() map[string]string {
 	metrics := make(map[string]string)
-	for key, value := range ms.gauge {
+	for key, value := range ms.Gauge {
 		metrics[key] = strconv.FormatFloat(value, 'f', -1, 64)
 	}
-	for key, value := range ms.counter {
+	for key, value := range ms.Counter {
 		metrics[key] = strconv.FormatInt(value, 10)
 	}
 	return metrics

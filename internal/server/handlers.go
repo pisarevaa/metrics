@@ -122,6 +122,14 @@ func (s *Handler) StoreMetricsJSON(w http.ResponseWriter, r *http.Request) {
 
 	value, delta := s.Storage.Store(metric)
 
+	if s.Config.StoreInterval == 0 {
+		err = s.Storage.SaveToDosk(s.Config.FileStoragePath)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+	}
+
 	resp, err := json.Marshal(Metrics{
 		ID:    metric.ID,
 		MType: metric.MType,

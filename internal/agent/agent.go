@@ -77,7 +77,7 @@ func (s *Service) updateMemStats() error {
 		default:
 			return fmt.Errorf("not supported type: %v", value.Kind())
 		}
-		s.Storage.gauge[v] = floatValue
+		s.Storage.Gauge[v] = floatValue
 	}
 	return nil
 }
@@ -92,12 +92,12 @@ func (s *Service) updateRandomValue() error {
 		return err2
 	}
 	randomFloat := float64(n1 / n2)
-	s.Storage.gauge["RandomValue"] = randomFloat
+	s.Storage.Gauge["RandomValue"] = randomFloat
 	return nil
 }
 
 func (s *Service) updatePollCount() {
-	s.Storage.counter["PollCount"]++
+	s.Storage.Counter["PollCount"]++
 }
 
 func (s *Service) RunUpdateMetrics(wg *sync.WaitGroup) {
@@ -169,7 +169,7 @@ func (s *Service) makeHTTPRequest(payload Metrics) {
 }
 
 func (s *Service) SendMetrics() {
-	for metric, value := range s.Storage.gauge {
+	for metric, value := range s.Storage.Gauge {
 		payload := Metrics{
 			ID:    metric,
 			MType: "gauge",
@@ -177,7 +177,7 @@ func (s *Service) SendMetrics() {
 		}
 		s.makeHTTPRequest(payload)
 	}
-	for metric, value := range s.Storage.counter {
+	for metric, value := range s.Storage.Counter {
 		payload := Metrics{
 			ID:    metric,
 			MType: "counter",
@@ -185,6 +185,6 @@ func (s *Service) SendMetrics() {
 		}
 		s.makeHTTPRequest(payload)
 	}
-	s.Logger.Info("Send Gauge", s.Storage.gauge)
-	s.Logger.Info("Send Counter", s.Storage.counter)
+	s.Logger.Info("Send Gauge", s.Storage.Gauge)
+	s.Logger.Info("Send Counter", s.Storage.Counter)
 }
