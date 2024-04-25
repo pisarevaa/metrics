@@ -17,15 +17,13 @@ import (
 
 type ServerTestSuite struct {
 	suite.Suite
-	config  server.Config
-	logger  *zap.SugaredLogger
-	storage *server.MemStorage
+	config server.Config
+	logger *zap.SugaredLogger
 }
 
 func (suite *ServerTestSuite) SetupSuite() {
 	suite.config = server.GetConfig()
 	suite.logger = server.GetLogger()
-	suite.storage = server.NewMemStorageRepo()
 }
 
 func TestAgentSuite(t *testing.T) {
@@ -84,7 +82,8 @@ func testRequestWithGZIP(
 }
 
 func (suite *ServerTestSuite) TestServerUpdateAndGetMetrics() {
-	ts := httptest.NewServer(server.MetricsRouter(suite.config, suite.logger, suite.storage))
+	storage := server.NewMemStorageRepo()
+	ts := httptest.NewServer(server.MetricsRouter(suite.config, suite.logger, storage))
 	defer ts.Close()
 
 	type want struct {
@@ -199,7 +198,8 @@ func (suite *ServerTestSuite) TestServerUpdateAndGetMetrics() {
 }
 
 func (suite *ServerTestSuite) TestServerUpdateAndGetMetricsJSON() {
-	ts := httptest.NewServer(server.MetricsRouter(suite.config, suite.logger, suite.storage))
+	storage := server.NewMemStorageRepo()
+	ts := httptest.NewServer(server.MetricsRouter(suite.config, suite.logger, storage))
 	defer ts.Close()
 
 	type want struct {
@@ -317,7 +317,8 @@ func (suite *ServerTestSuite) TestServerUpdateAndGetMetricsJSON() {
 }
 
 func (suite *ServerTestSuite) TestServerUpdateAndGetMetricsWithGZIP() {
-	ts := httptest.NewServer(server.MetricsRouter(suite.config, suite.logger, suite.storage))
+	storage := server.NewMemStorageRepo()
+	ts := httptest.NewServer(server.MetricsRouter(suite.config, suite.logger, storage))
 	defer ts.Close()
 
 	type want struct {
