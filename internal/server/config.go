@@ -19,8 +19,8 @@ func GetConfig() Config {
 
 	flag.StringVar(&config.Host, "a", "localhost:8080", "address and port to run server")
 	flag.IntVar(&config.StoreInterval, "i", 300, "interval in sec to store metrics")
-	// flag.StringVar(&config.FileStoragePath, "f", "/tmp/metrics-db.json", "path to save metrics")
-	flag.StringVar(&config.FileStoragePath, "f", "metrics-db.json", "path to save metrics")
+	flag.StringVar(&config.FileStoragePath, "f", "/tmp/metrics-db.json", "path to save metrics")
+	// flag.StringVar(&config.FileStoragePath, "f", "metrics-db.json", "path to save metrics")
 	flag.BoolVar(&config.Restore, "r", true, "retore previous metrics data")
 	flag.Parse()
 	if len(flag.Args()) > 0 {
