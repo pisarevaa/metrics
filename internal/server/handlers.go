@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"go.uber.org/zap"
@@ -255,6 +256,24 @@ func (s *Handler) GetAllMetrics(w http.ResponseWriter, _ *http.Request) {
 		_, err := w.Write([]byte(row))
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+	}
+}
+
+func (s *Handler) RunTaskSaveToDisk() {
+	ticker := time.NewTicker(time.Duration(s.Config.StoreInterval) * time.Second)
+	stop := make(chan bool, 1)
+	for {
+		select {
+		case <-ticker.C:
+			err := s.Storage.SaveToDosk(s.Config.FileStoragePath)
+			if err != nil {
+				s.Logger.Error("error to save metrics to disk:", err)
+				stop <- true
+			}
+			s.Logger.Info("success save metrics to disk")
+		case <-stop:
 			return
 		}
 	}

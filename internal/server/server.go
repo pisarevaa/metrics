@@ -21,5 +21,11 @@ func MetricsRouter(config Config, logger *zap.SugaredLogger, storage *MemStorage
 	r.Get("/value/{metricType}/{metricName}", srv.GetMetric)
 	r.Post("/value/", srv.GetMetricJSON)
 	r.Get("/", srv.GetAllMetrics)
+
+	if config.StoreInterval > 0 {
+		logger.Info("Running background tasks...")
+		go srv.RunTaskSaveToDisk()
+	}
+
 	return r
 }
