@@ -5,12 +5,11 @@ import (
 	"go.uber.org/zap"
 )
 
-func MetricsRouter(config Config, logger *zap.SugaredLogger) chi.Router {
-	storage := NewMemStorageRepo()
+func MetricsRouter(config Config, logger *zap.SugaredLogger, storage *MemStorage) chi.Router {
 	// if config.Restore {
 	// 	err := storage.LoadFromDosk(config.FileStoragePath)
 	// 	if err != nil {
-	// 		logger.Fatal(err)
+	// 		logger.Error(err)
 	// 	}
 	// }
 	srv := NewHandler(storage, config, logger)
