@@ -216,10 +216,10 @@ func (s *Handler) GetMetricJSON(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Only 'gauge' and 'counter' values are not allowed!", http.StatusBadRequest)
 		return
 	}
-	if query.ID == "" {
-		http.Error(w, "Empty id is not allowed!", http.StatusNotFound)
-		return
-	}
+	// if query.ID == "" {
+	// 	http.Error(w, "Empty id is not allowed!", http.StatusNotFound)
+	// 	return
+	// }
 	s.Logger.Info(query.MType, query.ID)
 
 	value, delta, err := s.Storage.Get(query)
