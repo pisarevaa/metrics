@@ -6,12 +6,12 @@ import (
 )
 
 func MetricsRouter(config Config, logger *zap.SugaredLogger, storage *MemStorage) chi.Router {
-	// if config.Restore {
-	// 	err := storage.LoadFromDosk(config.FileStoragePath)
-	// 	if err != nil {
-	// 		logger.Error(err)
-	// 	}
-	// }
+	if config.Restore {
+		err := storage.LoadFromDosk(config.FileStoragePath)
+		if err != nil {
+			logger.Error(err)
+		}
+	}
 	srv := NewHandler(storage, config, logger)
 	r := chi.NewRouter()
 	r.Use(srv.HTTPLoggingMiddleware)
