@@ -103,6 +103,7 @@ func (s *Service) updatePollCount() {
 func (s *Service) RunUpdateMetrics(wg *sync.WaitGroup) {
 	defer wg.Done()
 	ticker := time.NewTicker(time.Duration(s.Config.PollInterval) * time.Second)
+	defer ticker.Stop()
 	stop := make(chan bool, 1)
 	for {
 		select {

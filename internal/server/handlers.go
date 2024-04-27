@@ -263,6 +263,7 @@ func (s *Handler) GetAllMetrics(w http.ResponseWriter, _ *http.Request) {
 
 func (s *Handler) RunTaskSaveToDisk() {
 	ticker := time.NewTicker(time.Duration(s.Config.StoreInterval) * time.Second)
+	defer ticker.Stop()
 	stop := make(chan bool, 1)
 	for {
 		select {

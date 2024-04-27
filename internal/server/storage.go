@@ -5,9 +5,11 @@ import (
 	"errors"
 	"os"
 	"strconv"
+	"sync"
 )
 
 type MemStorage struct {
+	mx      sync.Mutex
 	Gauge   map[string]float64 `json:"gauge"`
 	Counter map[string]int64   `json:"counter"`
 }
@@ -20,6 +22,8 @@ func NewMemStorageRepo() *MemStorage {
 }
 
 func (ms *MemStorage) Store(metric Metrics) (float64, int64) {
+	ms.mx.Lock()
+	defer ms.mx.Unlock()
 	if metric.MType == gauge {
 		if metric.Value == nil {
 			ms.Gauge[metric.ID] = 0.0
@@ -35,7 +39,7 @@ func (ms *MemStorage) Store(metric Metrics) (float64, int64) {
 	return ms.Gauge[metric.ID], ms.Counter[metric.ID]
 }
 
-func (ms MemStorage) SaveToDosk(filename string) error {
+func (ms *MemStorage) SaveToDosk(filename string) error {
 	if filename == "" {
 		return nil
 	}
