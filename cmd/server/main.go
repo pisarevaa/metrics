@@ -1,28 +1,25 @@
 package main
 
 import (
-	"log"
 	"net/http"
 	"time"
 
 	"github.com/pisarevaa/metrics/internal/server"
 )
 
-type Config struct {
-	Host string `env:"ADDRESS"`
-}
-
 const readTimeout = 5
 const writeTimout = 10
 
 func main() {
 	config := server.GetConfig()
-	log.Printf("Server is running on %v", config.Host)
+	logger := server.GetLogger()
+	storage := server.NewMemStorageRepo()
+	logger.Info("Server is running on ", config.Host)
 	srv := &http.Server{
 		Addr:         config.Host,
-		Handler:      server.MetricsRouter(config),
+		Handler:      server.MetricsRouter(config, logger, storage),
 		ReadTimeout:  readTimeout * time.Second,
 		WriteTimeout: writeTimout * time.Second,
 	}
-	log.Fatal(srv.ListenAndServe())
+	logger.Fatal(srv.ListenAndServe())
 }

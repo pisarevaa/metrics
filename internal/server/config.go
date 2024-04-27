@@ -8,13 +8,21 @@ import (
 )
 
 type Config struct {
-	Host string `env:"ADDRESS"`
+	Host            string `env:"ADDRESS"`
+	StoreInterval   int    `env:"STORE_INTERVAL"`
+	FileStoragePath string `env:"FILE_STORAGE_PATH"`
+	Restore         bool   `env:"RESTORE"`
 }
 
 func GetConfig() Config {
 	var config Config
 
 	flag.StringVar(&config.Host, "a", "localhost:8080", "address and port to run server")
+	flag.IntVar(&config.StoreInterval, "i", 300, "interval in sec to store metrics")
+	// flag.IntVar(&config.StoreInterval, "i", 10, "interval in sec to store metrics")
+	flag.StringVar(&config.FileStoragePath, "f", "/tmp/metrics-db.json", "path to save metrics")
+	// flag.StringVar(&config.FileStoragePath, "f", "metrics-db.json", "path to save metrics")
+	flag.BoolVar(&config.Restore, "r", true, "retore previous metrics data")
 	flag.Parse()
 	if len(flag.Args()) > 0 {
 		log.Fatal("used not declared arguments")
@@ -25,8 +33,18 @@ func GetConfig() Config {
 	if err != nil {
 		log.Fatal(err)
 	}
+
 	if envConfig.Host != "" {
 		config.Host = envConfig.Host
+	}
+	if envConfig.StoreInterval != 0 {
+		config.StoreInterval = envConfig.StoreInterval
+	}
+	if envConfig.FileStoragePath != "" {
+		config.FileStoragePath = envConfig.FileStoragePath
+	}
+	if !envConfig.Restore {
+		config.Restore = envConfig.Restore
 	}
 
 	return config

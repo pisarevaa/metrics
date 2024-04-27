@@ -1,15 +1,24 @@
 package agent
 
 import (
+	"bytes"
+	"compress/gzip"
 	"crypto/rand"
+	"encoding/json"
 	"fmt"
-	"log"
 	"math/big"
 	"reflect"
 	"runtime"
 	"sync"
 	"time"
 )
+
+type Metrics struct {
+	ID    string   `json:"id"`              // имя метрики
+	MType string   `json:"type"`            // параметр, принимающий значение gauge или counter
+	Delta *int64   `json:"delta,omitempty"` // значение метрики в случае передачи counter
+	Value *float64 `json:"value,omitempty"` // значение метрики в случае передачи gauge
+}
 
 func randomInt() (int64, error) {
 	const maxInt = 1000000
@@ -68,7 +77,7 @@ func (s *Service) updateMemStats() error {
 		default:
 			return fmt.Errorf("not supported type: %v", value.Kind())
 		}
-		s.Storage.gauge[v] = floatValue
+		s.Storage.Gauge[v] = floatValue
 	}
 	return nil
 }
@@ -83,24 +92,25 @@ func (s *Service) updateRandomValue() error {
 		return err2
 	}
 	randomFloat := float64(n1 / n2)
-	s.Storage.gauge["RandomValue"] = randomFloat
+	s.Storage.Gauge["RandomValue"] = randomFloat
 	return nil
 }
 
 func (s *Service) updatePollCount() {
-	s.Storage.counter["PollCount"]++
+	s.Storage.Counter["PollCount"]++
 }
 
 func (s *Service) RunUpdateMetrics(wg *sync.WaitGroup) {
 	defer wg.Done()
 	ticker := time.NewTicker(time.Duration(s.Config.PollInterval) * time.Second)
+	defer ticker.Stop()
 	stop := make(chan bool, 1)
 	for {
 		select {
 		case <-ticker.C:
 			err := s.UpdateMetrics()
 			if err != nil {
-				log.Println("error to update metrics:", err)
+				s.Logger.Error("error to update metrics:", err)
 				stop <- true
 			}
 		case <-stop:
@@ -110,7 +120,7 @@ func (s *Service) RunUpdateMetrics(wg *sync.WaitGroup) {
 }
 
 func (s *Service) UpdateMetrics() error {
-	log.Println("UpdateMetrics")
+	s.Logger.Info("UpdateMetrics")
 	updateMemStatsError := s.updateMemStats()
 	if updateMemStatsError != nil {
 		return updateMemStatsError
@@ -130,21 +140,52 @@ func (s *Service) RunSendMetrics(wg *sync.WaitGroup) {
 	}
 }
 
+func (s *Service) makeHTTPRequest(payload Metrics) {
+	requestURL := fmt.Sprintf("http://%v/update/", s.Config.Host)
+	buf := bytes.NewBuffer(nil)
+	zb := gzip.NewWriter(buf)
+	payloadString, errJSON := json.Marshal(payload)
+	if errJSON != nil {
+		s.Logger.Error(errJSON)
+		return
+	}
+	_, errGzip := zb.Write(payloadString)
+	if errGzip != nil {
+		s.Logger.Error(errGzip)
+		return
+	}
+	errZb := zb.Close()
+	if errZb != nil {
+		s.Logger.Error(errZb)
+		return
+	}
+	_, err := s.Client.R().
+		SetHeader("Content-Type", "application/json").
+		SetHeader("Content-Encoding", "gzip").
+		SetBody(buf).
+		Post(requestURL)
+	if err != nil {
+		s.Logger.Error("error making http request: ", err)
+	}
+}
+
 func (s *Service) SendMetrics() {
-	for metric, value := range s.Storage.gauge {
-		requestURL := fmt.Sprintf("http://%v/update/gauge/%v/%v", s.Config.Host, metric, value)
-		_, err := s.Client.R().Post(requestURL)
-		if err != nil {
-			log.Printf("error making http request: %s\n", err)
+	for metric, value := range s.Storage.Gauge {
+		payload := Metrics{
+			ID:    metric,
+			MType: "gauge",
+			Value: &value, // #nosec G601 - проблема ичезнет в go 1.22
 		}
+		s.makeHTTPRequest(payload)
 	}
-	for metric, value := range s.Storage.counter {
-		requestURL := fmt.Sprintf("http://%v/update/counter/%v/%v", s.Config.Host, metric, value)
-		_, err := s.Client.R().Post(requestURL)
-		if err != nil {
-			log.Printf("error making http request: %s\n", err)
+	for metric, value := range s.Storage.Counter {
+		payload := Metrics{
+			ID:    metric,
+			MType: "counter",
+			Delta: &value, // #nosec G601 - проблема ичезнет в go 1.22
 		}
+		s.makeHTTPRequest(payload)
 	}
-	log.Println("Send Gauge", s.Storage.gauge)
-	log.Println("Send Counter", s.Storage.counter)
+	s.Logger.Info("Send Gauge", s.Storage.Gauge)
+	s.Logger.Info("Send Counter", s.Storage.Counter)
 }
