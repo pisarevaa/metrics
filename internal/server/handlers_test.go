@@ -83,7 +83,7 @@ func testRequestWithGZIP(
 
 func (suite *ServerTestSuite) TestServerUpdateAndGetMetrics() {
 	storage := server.NewMemStorageRepo()
-	ts := httptest.NewServer(server.MetricsRouter(suite.config, suite.logger, storage))
+	ts := httptest.NewServer(server.MetricsRouter(suite.config, suite.logger, storage, nil))
 	defer ts.Close()
 
 	type want struct {
@@ -199,7 +199,7 @@ func (suite *ServerTestSuite) TestServerUpdateAndGetMetrics() {
 
 func (suite *ServerTestSuite) TestServerUpdateAndGetMetricsJSON() {
 	storage := server.NewMemStorageRepo()
-	ts := httptest.NewServer(server.MetricsRouter(suite.config, suite.logger, storage))
+	ts := httptest.NewServer(server.MetricsRouter(suite.config, suite.logger, storage, nil))
 	defer ts.Close()
 
 	type want struct {
@@ -318,7 +318,7 @@ func (suite *ServerTestSuite) TestServerUpdateAndGetMetricsJSON() {
 
 func (suite *ServerTestSuite) TestServerUpdateAndGetMetricsWithGZIP() {
 	storage := server.NewMemStorageRepo()
-	ts := httptest.NewServer(server.MetricsRouter(suite.config, suite.logger, storage))
+	ts := httptest.NewServer(server.MetricsRouter(suite.config, suite.logger, storage, nil))
 	defer ts.Close()
 
 	type want struct {

@@ -12,6 +12,7 @@ type Config struct {
 	StoreInterval   int    `env:"STORE_INTERVAL"`
 	FileStoragePath string `env:"FILE_STORAGE_PATH"`
 	Restore         bool   `env:"RESTORE"`
+	DatabaseDSN     string `env:"DATABASE_DSN"`
 }
 
 func GetConfig() Config {
@@ -23,6 +24,13 @@ func GetConfig() Config {
 	flag.StringVar(&config.FileStoragePath, "f", "/tmp/metrics-db.json", "path to save metrics")
 	// flag.StringVar(&config.FileStoragePath, "f", "metrics-db.json", "path to save metrics")
 	flag.BoolVar(&config.Restore, "r", true, "retore previous metrics data")
+	// flag.StringVar(
+	// 	&config.DatabaseDSN,
+	// 	"d",
+	// 	"postgres://metrics:CC7B02B06C4C1CF81FAE7D8C46C429EC@localhost:5432/metrics",
+	// 	"database dsn",
+	// )
+	flag.StringVar(&config.DatabaseDSN, "d", "", "database dsn")
 	flag.Parse()
 	if len(flag.Args()) > 0 {
 		log.Fatal("used not declared arguments")
@@ -45,6 +53,9 @@ func GetConfig() Config {
 	}
 	if !envConfig.Restore {
 		config.Restore = envConfig.Restore
+	}
+	if envConfig.DatabaseDSN != "" {
+		config.DatabaseDSN = envConfig.DatabaseDSN
 	}
 
 	return config

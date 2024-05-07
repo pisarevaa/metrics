@@ -27,3 +27,4 @@ vendor/
 
 # Own notes to project
 /docs
+.env

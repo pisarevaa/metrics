@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"go.uber.org/zap"
 )
 
@@ -17,6 +18,7 @@ type Handler struct {
 	Storage *MemStorage
 	Config  Config
 	Logger  *zap.SugaredLogger
+	DBPool  *pgxpool.Pool
 }
 
 type Metrics struct {
@@ -34,12 +36,27 @@ type QueryMetrics struct {
 const gauge = "gauge"
 const counter = "counter"
 
-func NewHandler(storage *MemStorage, config Config, logger *zap.SugaredLogger) *Handler {
+func NewHandler(storage *MemStorage, config Config, logger *zap.SugaredLogger, dbpool *pgxpool.Pool) *Handler {
 	return &Handler{
 		Storage: storage,
 		Config:  config,
 		Logger:  logger,
+		DBPool:  dbpool,
 	}
+}
+
+func (s *Handler) Ping(w http.ResponseWriter, r *http.Request) {
+	if s.DBPool == nil {
+		http.Error(w, "DBPool is not initialized!", http.StatusInternalServerError)
+		return
+	}
+	var one int
+	err := s.DBPool.QueryRow(r.Context(), "select 1").Scan(&one)
+	if err != nil {
+		http.Error(w, "DBPool is not initialized!", http.StatusInternalServerError)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
 }
 
 func (s *Handler) StoreMetrics(w http.ResponseWriter, r *http.Request) {
