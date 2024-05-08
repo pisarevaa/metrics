@@ -18,6 +18,12 @@ func MetricsRouter(
 			logger.Error(err)
 		}
 	}
+	if dbpool != nil {
+		err := restoreMetricsFromDB(dbpool, storage)
+		if err != nil {
+			logger.Error(err)
+		}
+	}
 	srv := NewHandler(storage, config, logger, dbpool)
 	r := chi.NewRouter()
 	r.Use(srv.HTTPLoggingMiddleware)

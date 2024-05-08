@@ -148,6 +148,23 @@ func (s *Handler) StoreMetricsJSON(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	if s.DBPool != nil {
+		_, err = s.DBPool.Exec(r.Context(), `
+			INSERT INTO metrics (id, type, delta, value, updated_at)
+			VALUES ($1, $2, $3, $4, $5)
+			ON CONFLICT (id) DO UPDATE
+			SET
+			type = excluded.type,
+			delta = excluded.delta,
+			value = excluded.value,
+			updated_at = excluded.updated_at
+		`, metric.ID, metric.MType, metric.Delta, metric.Value, time.Now())
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+	}
+
 	resp, err := json.Marshal(Metrics{
 		ID:    metric.ID,
 		MType: metric.MType,
