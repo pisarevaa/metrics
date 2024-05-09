@@ -33,8 +33,10 @@ type QueryMetrics struct {
 	MType string `json:"type"`
 }
 
-const gauge = "gauge"
-const counter = "counter"
+const (
+	gauge   = "gauge"
+	counter = "counter"
+)
 
 func NewHandler(storage *MemStorage, config Config, logger *zap.SugaredLogger, dbpool *pgxpool.Pool) *Handler {
 	return &Handler{
@@ -149,16 +151,12 @@ func (s *Handler) StoreMetricsJSON(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if s.DBPool != nil {
-		_, err = s.DBPool.Exec(r.Context(), `
-			INSERT INTO metrics (id, type, delta, value, updated_at)
-			VALUES ($1, $2, $3, $4, $5)
-			ON CONFLICT (id) DO UPDATE
-			SET
-			type = excluded.type,
-			delta = excluded.delta,
-			value = excluded.value,
-			updated_at = excluded.updated_at
-		`, metric.ID, metric.MType, metric.Delta, metric.Value, time.Now())
+		err = InsertRowIntoDDB(
+			r.Context(),
+			s.DBPool,
+			metric,
+			time.Now(),
+		)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -185,6 +183,83 @@ func (s *Handler) StoreMetricsJSON(w http.ResponseWriter, r *http.Request) {
 	s.Logger.Info("Got request ", r.URL.Path)
 	s.Logger.Info("Storage ", s.Storage.GetAll())
 
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+}
+
+func (s *Handler) StoreMetricsJSONBatches(w http.ResponseWriter, r *http.Request) { //nolint:funlen,gocognit
+	var metrics []Metrics
+	var buf bytes.Buffer
+	_, err := buf.ReadFrom(r.Body)
+	if err != nil {
+		s.Logger.Error(err)
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	if err = json.Unmarshal(buf.Bytes(), &metrics); err != nil {
+		s.Logger.Error(err)
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	for _, metric := range metrics {
+		if !(metric.MType == gauge || metric.MType == counter) {
+			http.Error(w, "Only 'gauge' and 'counter' values are allowed!", http.StatusBadRequest)
+			return
+		}
+		if metric.ID == "" {
+			http.Error(w, "Empty metric id is not allowed!", http.StatusNotFound)
+			return
+		}
+		if metric.MType == gauge && metric.Value == nil {
+			s.Logger.Error("Empty metric Value is not allowed!")
+			http.Error(w, "Empty metric Value is not allowed!", http.StatusBadRequest)
+			return
+		}
+		if metric.MType == counter && metric.Delta == nil {
+			s.Logger.Error("Empty metric Delta is not allowed!")
+			http.Error(w, "Empty metric Delta is not allowed!", http.StatusBadRequest)
+			return
+		}
+		s.Storage.Store(metric)
+	}
+
+	if s.Config.StoreInterval == 0 {
+		err = s.Storage.SaveToDosk(s.Config.FileStoragePath)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+	}
+
+	if s.DBPool != nil {
+		tx, errTx := s.DBPool.Begin(r.Context())
+		if errTx != nil {
+			http.Error(w, errTx.Error(), http.StatusInternalServerError)
+			return
+		}
+		now := time.Now()
+		for _, metric := range metrics {
+			err = InsertRowIntoDDB(
+				r.Context(),
+				s.DBPool,
+				metric,
+				now,
+			)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+		}
+		errTx = tx.Commit(r.Context())
+		if errTx != nil {
+			http.Error(w, errTx.Error(), http.StatusInternalServerError)
+			return
+		}
+	}
+
+	s.Logger.Info("Got request ", r.URL.Path)
+	s.Logger.Info("Storage ", s.Storage.GetAll())
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 }

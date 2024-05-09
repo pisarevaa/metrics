@@ -19,7 +19,7 @@ func MetricsRouter(
 		}
 	}
 	if dbpool != nil {
-		err := restoreMetricsFromDB(dbpool, storage)
+		err := RestoreMetricsFromDB(dbpool, storage)
 		if err != nil {
 			logger.Error(err)
 		}
@@ -31,6 +31,7 @@ func MetricsRouter(
 	r.Get("/ping", srv.Ping)
 	r.Post("/update/{metricType}/{metricName}/{metricValue}", srv.StoreMetrics)
 	r.Post("/update/", srv.StoreMetricsJSON)
+	r.Post("/updates/", srv.StoreMetricsJSONBatches)
 	r.Get("/value/{metricType}/{metricName}", srv.GetMetric)
 	r.Post("/value/", srv.GetMetricJSON)
 	r.Get("/", srv.GetAllMetrics)

@@ -2,12 +2,13 @@ package server
 
 import (
 	"context"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"go.uber.org/zap"
 )
 
-func createMerticsTable(dbpool *pgxpool.Pool) error {
+func CreateMerticsTable(dbpool *pgxpool.Pool) error {
 	_, err := dbpool.Exec(context.Background(), `
 		CREATE TABLE IF NOT EXISTS metrics (
 			"id" VARCHAR(250) PRIMARY KEY,
@@ -23,7 +24,7 @@ func createMerticsTable(dbpool *pgxpool.Pool) error {
 	return nil
 }
 
-func restoreMetricsFromDB(dbpool *pgxpool.Pool, storage *MemStorage) error {
+func RestoreMetricsFromDB(dbpool *pgxpool.Pool, storage *MemStorage) error {
 	rows, err := dbpool.Query(context.Background(), "SELECT id, type, delta, value FROM metrics")
 	if err != nil {
 		return err
@@ -40,6 +41,23 @@ func restoreMetricsFromDB(dbpool *pgxpool.Pool, storage *MemStorage) error {
 	return nil
 }
 
+func InsertRowIntoDDB(ctx context.Context, dbpool *pgxpool.Pool, metric Metrics, now time.Time) error {
+	_, err := dbpool.Exec(ctx, `
+			INSERT INTO metrics (id, type, delta, value, updated_at)
+			VALUES ($1, $2, $3, $4, $5)
+			ON CONFLICT (id) DO UPDATE
+			SET
+			type = excluded.type,
+			delta = excluded.delta,
+			value = excluded.value,
+			updated_at = excluded.updated_at
+		`, metric.ID, metric.MType, metric.Delta, metric.Value, now)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func ConnectDB(config Config, logger *zap.SugaredLogger) *pgxpool.Pool {
 	if config.DatabaseDSN == "" {
 		return nil
@@ -49,7 +67,7 @@ func ConnectDB(config Config, logger *zap.SugaredLogger) *pgxpool.Pool {
 		logger.Error("Unable to create connection pool: %v", err)
 		return nil
 	}
-	err = createMerticsTable(dbpool)
+	err = CreateMerticsTable(dbpool)
 	if err != nil {
 		logger.Error("Unable to create table metrics: %v", err)
 		return nil

@@ -14,11 +14,16 @@ import (
 )
 
 type Metrics struct {
-	ID    string   `json:"id"`              // имя метрики
-	MType string   `json:"type"`            // параметр, принимающий значение gauge или counter
-	Delta *int64   `json:"delta,omitempty"` // значение метрики в случае передачи counter
-	Value *float64 `json:"value,omitempty"` // значение метрики в случае передачи gauge
+	ID    string  `json:"id"`    // имя метрики
+	MType string  `json:"type"`  // параметр, принимающий значение gauge или counter
+	Delta int64   `json:"delta"` // значение метрики в случае передачи counter
+	Value float64 `json:"value"` // значение метрики в случае передачи gauge
 }
+
+const (
+	gauge   = "gauge"
+	counter = "counter"
+)
 
 func randomInt() (int64, error) {
 	const maxInt = 1000000
@@ -68,16 +73,14 @@ func (s *Service) updateMemStats() error {
 		value := reflect.ValueOf(memStats).FieldByName(v)
 		var floatValue float64
 		switch value.Kind() {
-		case reflect.Uint64:
-			floatValue = float64(value.Uint())
-		case reflect.Uint32:
+		case reflect.Uint64, reflect.Uint32:
 			floatValue = float64(value.Uint())
 		case reflect.Float64:
 			floatValue = value.Float()
 		default:
 			return fmt.Errorf("not supported type: %v", value.Kind())
 		}
-		s.Storage.Gauge[v] = floatValue
+		s.Storage.StoreGauge(v, floatValue)
 	}
 	return nil
 }
@@ -92,12 +95,8 @@ func (s *Service) updateRandomValue() error {
 		return err2
 	}
 	randomFloat := float64(n1 / n2)
-	s.Storage.Gauge["RandomValue"] = randomFloat
+	s.Storage.StoreGauge("RandomValue", randomFloat)
 	return nil
-}
-
-func (s *Service) updatePollCount() {
-	s.Storage.Counter["PollCount"]++
 }
 
 func (s *Service) RunUpdateMetrics(wg *sync.WaitGroup) {
@@ -129,7 +128,7 @@ func (s *Service) UpdateMetrics() error {
 	if updateRandomValueError != nil {
 		return updateRandomValueError
 	}
-	s.updatePollCount()
+	s.Storage.StoreCounter()
 	return nil
 }
 
@@ -140,26 +139,55 @@ func (s *Service) RunSendMetrics(wg *sync.WaitGroup) {
 	}
 }
 
-func (s *Service) makeHTTPRequest(payload Metrics) {
-	requestURL := fmt.Sprintf("http://%v/update/", s.Config.Host)
+// func (s *Service) makeHTTPRequest(metric Metrics) {
+// 	requestURL := fmt.Sprintf("http://%v/update/", s.Config.Host)
+// 	buf := bytes.NewBuffer(nil)
+// 	zb := gzip.NewWriter(buf)
+// 	payloadString, err := json.Marshal(metric)
+// 	if err != nil {
+// 		s.Logger.Error(err)
+// 		return
+// 	}
+// 	_, err = zb.Write(payloadString)
+// 	if err != nil {
+// 		s.Logger.Error(err)
+// 		return
+// 	}
+// 	err = zb.Close()
+// 	if err != nil {
+// 		s.Logger.Error(err)
+// 		return
+// 	}
+// 	_, err = s.Client.R().
+// 		SetHeader("Content-Type", "application/json").
+// 		SetHeader("Content-Encoding", "gzip").
+// 		SetBody(buf).
+// 		Post(requestURL)
+// 	if err != nil {
+// 		s.Logger.Error("error making http request: ", err)
+// 	}
+// }
+
+func (s *Service) makeHTTPRequest(metrics []Metrics) {
+	requestURL := fmt.Sprintf("http://%v/updates/", s.Config.Host)
 	buf := bytes.NewBuffer(nil)
 	zb := gzip.NewWriter(buf)
-	payloadString, errJSON := json.Marshal(payload)
-	if errJSON != nil {
-		s.Logger.Error(errJSON)
+	payloadString, err := json.Marshal(metrics)
+	if err != nil {
+		s.Logger.Error(err)
 		return
 	}
-	_, errGzip := zb.Write(payloadString)
-	if errGzip != nil {
-		s.Logger.Error(errGzip)
+	_, err = zb.Write(payloadString)
+	if err != nil {
+		s.Logger.Error(err)
 		return
 	}
-	errZb := zb.Close()
-	if errZb != nil {
-		s.Logger.Error(errZb)
+	err = zb.Close()
+	if err != nil {
+		s.Logger.Error(err)
 		return
 	}
-	_, err := s.Client.R().
+	_, err = s.Client.R().
 		SetHeader("Content-Type", "application/json").
 		SetHeader("Content-Encoding", "gzip").
 		SetBody(buf).
@@ -169,23 +197,18 @@ func (s *Service) makeHTTPRequest(payload Metrics) {
 	}
 }
 
+// func (s *Service) SendMetrics() {
+// 	metrics := s.Storage.GetMetrics()
+// 	for _, metric := range metrics {
+// 		s.makeHTTPRequest(metric)
+// 	}
+// 	s.Logger.Info("Send Gauge", s.Storage.Gauge)
+// 	s.Logger.Info("Send Counter", s.Storage.Counter)
+// }
+
 func (s *Service) SendMetrics() {
-	for metric, value := range s.Storage.Gauge {
-		payload := Metrics{
-			ID:    metric,
-			MType: "gauge",
-			Value: &value, // #nosec G601 - проблема ичезнет в go 1.22
-		}
-		s.makeHTTPRequest(payload)
-	}
-	for metric, value := range s.Storage.Counter {
-		payload := Metrics{
-			ID:    metric,
-			MType: "counter",
-			Delta: &value, // #nosec G601 - проблема ичезнет в go 1.22
-		}
-		s.makeHTTPRequest(payload)
-	}
+	metrics := s.Storage.GetMetrics()
+	s.makeHTTPRequest(metrics)
 	s.Logger.Info("Send Gauge", s.Storage.Gauge)
 	s.Logger.Info("Send Counter", s.Storage.Counter)
 }
