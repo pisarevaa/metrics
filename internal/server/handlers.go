@@ -17,7 +17,7 @@ type Handler struct {
 	Storage *MemStorage
 	Config  Config
 	Logger  *zap.SugaredLogger
-	DBPool  *DBPool
+	DBPool  MetricsModel
 }
 
 type Metrics struct {
@@ -37,7 +37,7 @@ const (
 	counter = "counter"
 )
 
-func NewHandler(storage *MemStorage, config Config, logger *zap.SugaredLogger, dbpool *DBPool) *Handler {
+func NewHandler(storage *MemStorage, config Config, logger *zap.SugaredLogger, dbpool MetricsModel) *Handler {
 	return &Handler{
 		Storage: storage,
 		Config:  config,

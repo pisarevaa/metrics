@@ -9,7 +9,7 @@ func MetricsRouter(
 	config Config,
 	logger *zap.SugaredLogger,
 	storage *MemStorage,
-	dbpool *DBPool,
+	dbpool MetricsModel,
 ) chi.Router {
 	if config.Restore {
 		err := storage.LoadFromDosk(config.FileStoragePath)

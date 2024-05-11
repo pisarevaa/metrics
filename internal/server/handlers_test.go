@@ -12,7 +12,10 @@ import (
 
 	"github.com/stretchr/testify/suite"
 
+	"github.com/golang/mock/gomock"
+
 	"github.com/pisarevaa/metrics/internal/server"
+	mock "github.com/pisarevaa/metrics/internal/server/mocks"
 )
 
 type ServerTestSuite struct {
@@ -401,21 +404,46 @@ func (suite *ServerTestSuite) TestServerUpdateAndGetMetricsWithGZIP() {
 	}
 }
 
-// func (suite *ServerTestSuite) TestPing() {
-// 	storage := server.NewMemStorageRepo()
-// 	ctrl := gomock.NewController(suite.T())
-// 	defer ctrl.Finish()
+func (suite *ServerTestSuite) TestPing() {
+	storage := server.NewMemStorageRepo()
+	ctrl := gomock.NewController(suite.T())
+	defer ctrl.Finish()
 
-// 	m := mock.NewMockMetricsModel(ctrl)
+	m := mock.NewMockMetricsModel(ctrl)
 
-// 	m.EXPECT().
-// 	Ping(gomock.Any()).
-// 	Return(nil)
+	m.EXPECT().
+		Ping(gomock.Any()).
+		Return(nil)
+	m.EXPECT().
+		RestoreMetricsFromDB(gomock.Any()).
+		Return(nil)
 
-// 	ts := httptest.NewServer(server.MetricsRouter(suite.config, suite.logger, storage, m))
-// 	defer ts.Close()
+	ts := httptest.NewServer(server.MetricsRouter(suite.config, suite.logger, storage, m))
+	defer ts.Close()
 
-// 	resp, _ := testRequest(suite, ts, "GET", "/ping", "")
-// 	defer resp.Body.Close()
-// 	suite.Require().Equal(200, resp.StatusCode)
-// }
+	resp, _ := testRequest(suite, ts, "GET", "/ping", "")
+	defer resp.Body.Close()
+	suite.Require().Equal(200, resp.StatusCode)
+}
+
+func (suite *ServerTestSuite) TestServerUpdateAndGetMetricsJSONBatch() {
+	storage := server.NewMemStorageRepo()
+	ctrl := gomock.NewController(suite.T())
+	defer ctrl.Finish()
+
+	m := mock.NewMockMetricsModel(ctrl)
+
+	m.EXPECT().
+		InsertRowsIntoDDWithRetry(gomock.Any(), gomock.Any()).
+		Return(nil)
+	m.EXPECT().
+		RestoreMetricsFromDB(gomock.Any()).
+		Return(nil)
+
+	ts := httptest.NewServer(server.MetricsRouter(suite.config, suite.logger, storage, m))
+	defer ts.Close()
+
+	resp, _ := testRequest(suite, ts, "POST", "/updates/", `[{"id": "HeapAlloc", "type": "gauge", "value": 1.25}]`)
+	defer resp.Body.Close()
+	suite.Require().Equal(200, resp.StatusCode)
+}
