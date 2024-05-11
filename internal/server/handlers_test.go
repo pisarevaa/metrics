@@ -86,7 +86,16 @@ func testRequestWithGZIP(
 
 func (suite *ServerTestSuite) TestServerUpdateAndGetMetrics() {
 	storage := server.NewMemStorageRepo()
-	ts := httptest.NewServer(server.MetricsRouter(suite.config, suite.logger, storage, nil))
+	ctrl := gomock.NewController(suite.T())
+	defer ctrl.Finish()
+
+	m := mock.NewMockMetricsModel(ctrl)
+
+	m.EXPECT().
+		IsExist().
+		Return(false).
+		MaxTimes(10)
+	ts := httptest.NewServer(server.MetricsRouter(suite.config, suite.logger, storage, m))
 	defer ts.Close()
 
 	type want struct {
@@ -202,7 +211,16 @@ func (suite *ServerTestSuite) TestServerUpdateAndGetMetrics() {
 
 func (suite *ServerTestSuite) TestServerUpdateAndGetMetricsJSON() {
 	storage := server.NewMemStorageRepo()
-	ts := httptest.NewServer(server.MetricsRouter(suite.config, suite.logger, storage, nil))
+	ctrl := gomock.NewController(suite.T())
+	defer ctrl.Finish()
+
+	m := mock.NewMockMetricsModel(ctrl)
+
+	m.EXPECT().
+		IsExist().
+		Return(false).
+		MaxTimes(10)
+	ts := httptest.NewServer(server.MetricsRouter(suite.config, suite.logger, storage, m))
 	defer ts.Close()
 
 	type want struct {
@@ -321,7 +339,17 @@ func (suite *ServerTestSuite) TestServerUpdateAndGetMetricsJSON() {
 
 func (suite *ServerTestSuite) TestServerUpdateAndGetMetricsWithGZIP() {
 	storage := server.NewMemStorageRepo()
-	ts := httptest.NewServer(server.MetricsRouter(suite.config, suite.logger, storage, nil))
+	ctrl := gomock.NewController(suite.T())
+	defer ctrl.Finish()
+
+	m := mock.NewMockMetricsModel(ctrl)
+
+	m.EXPECT().
+		IsExist().
+		Return(false).
+		MaxTimes(10)
+
+	ts := httptest.NewServer(server.MetricsRouter(suite.config, suite.logger, storage, m))
 	defer ts.Close()
 
 	type want struct {
@@ -415,6 +443,10 @@ func (suite *ServerTestSuite) TestPing() {
 		Ping(gomock.Any()).
 		Return(nil)
 	m.EXPECT().
+		IsExist().
+		Return(true).
+		MaxTimes(2)
+	m.EXPECT().
 		RestoreMetricsFromDB(gomock.Any()).
 		Return(nil)
 
@@ -434,8 +466,12 @@ func (suite *ServerTestSuite) TestServerUpdateAndGetMetricsJSONBatch() {
 	m := mock.NewMockMetricsModel(ctrl)
 
 	m.EXPECT().
-		InsertRowsIntoDDWithRetry(gomock.Any(), gomock.Any()).
+		InsertRowsIntoDBWithRetry(gomock.Any(), gomock.Any()).
 		Return(nil)
+	m.EXPECT().
+		IsExist().
+		Return(true).
+		MaxTimes(2)
 	m.EXPECT().
 		RestoreMetricsFromDB(gomock.Any()).
 		Return(nil)

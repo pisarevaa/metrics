@@ -17,7 +17,8 @@ func MetricsRouter(
 			logger.Error(err)
 		}
 	}
-	if dbpool != nil {
+
+	if dbpool.IsExist() {
 		err := dbpool.RestoreMetricsFromDB(storage)
 		if err != nil {
 			logger.Error(err)

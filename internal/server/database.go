@@ -10,10 +10,11 @@ import (
 )
 
 type MetricsModel interface {
+	IsExist() (check bool)
 	Ping(ctx context.Context) (err error)
 	RestoreMetricsFromDB(storage *MemStorage) (err error)
 	InsertRowsIntoDB(ctx context.Context, metrics []Metrics) (err error)
-	InsertRowsIntoDDWithRetry(ctx context.Context, metrics []Metrics) (err error)
+	InsertRowsIntoDBWithRetry(ctx context.Context, metrics []Metrics) (err error)
 	InsertRowIntoDB(ctx context.Context, metric Metrics, now time.Time) (err error)
 }
 
@@ -35,6 +36,10 @@ func CreateMerticsTable(dbpool *pgxpool.Pool) error {
 		return err
 	}
 	return nil
+}
+
+func (dbpool *DBPool) IsExist() bool {
+	return dbpool != nil
 }
 
 func (dbpool *DBPool) Ping(ctx context.Context) error {
@@ -86,7 +91,7 @@ func (dbpool *DBPool) InsertRowsIntoDB(ctx context.Context, metrics []Metrics) e
 	return nil
 }
 
-func (dbpool *DBPool) InsertRowsIntoDDWithRetry(ctx context.Context, metrics []Metrics) error {
+func (dbpool *DBPool) InsertRowsIntoDBWithRetry(ctx context.Context, metrics []Metrics) error {
 	retries := 3
 	timeouts := map[int]int{1: 5, 2: 3, 3: 1} //nolint:gomnd // omit
 	for retries > 0 {

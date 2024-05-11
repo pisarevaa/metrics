@@ -64,18 +64,32 @@ func (mr *MockMetricsModelMockRecorder) InsertRowsIntoDB(ctx, metrics interface{
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InsertRowsIntoDB", reflect.TypeOf((*MockMetricsModel)(nil).InsertRowsIntoDB), ctx, metrics)
 }
 
-// InsertRowsIntoDDWithRetry mocks base method.
-func (m *MockMetricsModel) InsertRowsIntoDDWithRetry(ctx context.Context, metrics []server.Metrics) error {
+// InsertRowsIntoDBWithRetry mocks base method.
+func (m *MockMetricsModel) InsertRowsIntoDBWithRetry(ctx context.Context, metrics []server.Metrics) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "InsertRowsIntoDDWithRetry", ctx, metrics)
+	ret := m.ctrl.Call(m, "InsertRowsIntoDBWithRetry", ctx, metrics)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
-// InsertRowsIntoDDWithRetry indicates an expected call of InsertRowsIntoDDWithRetry.
-func (mr *MockMetricsModelMockRecorder) InsertRowsIntoDDWithRetry(ctx, metrics interface{}) *gomock.Call {
+// InsertRowsIntoDBWithRetry indicates an expected call of InsertRowsIntoDBWithRetry.
+func (mr *MockMetricsModelMockRecorder) InsertRowsIntoDBWithRetry(ctx, metrics interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InsertRowsIntoDDWithRetry", reflect.TypeOf((*MockMetricsModel)(nil).InsertRowsIntoDDWithRetry), ctx, metrics)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InsertRowsIntoDBWithRetry", reflect.TypeOf((*MockMetricsModel)(nil).InsertRowsIntoDBWithRetry), ctx, metrics)
+}
+
+// IsExist mocks base method.
+func (m *MockMetricsModel) IsExist() bool {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "IsExist")
+	ret0, _ := ret[0].(bool)
+	return ret0
+}
+
+// IsExist indicates an expected call of IsExist.
+func (mr *MockMetricsModelMockRecorder) IsExist() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsExist", reflect.TypeOf((*MockMetricsModel)(nil).IsExist))
 }
 
 // Ping mocks base method.

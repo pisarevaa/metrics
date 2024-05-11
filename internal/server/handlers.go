@@ -47,7 +47,7 @@ func NewHandler(storage *MemStorage, config Config, logger *zap.SugaredLogger, d
 }
 
 func (s *Handler) Ping(w http.ResponseWriter, r *http.Request) {
-	if s.DBPool == nil {
+	if !s.DBPool.IsExist() {
 		http.Error(w, "DBPool is not initialized!", http.StatusInternalServerError)
 		return
 	}
@@ -148,7 +148,7 @@ func (s *Handler) StoreMetricsJSON(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	if s.DBPool != nil {
+	if s.DBPool.IsExist() {
 		err = s.DBPool.InsertRowIntoDB(
 			r.Context(),
 			metric,
@@ -229,8 +229,8 @@ func (s *Handler) StoreMetricsJSONBatches(w http.ResponseWriter, r *http.Request
 		}
 	}
 
-	if s.DBPool != nil {
-		err = s.DBPool.InsertRowsIntoDDWithRetry(
+	if s.DBPool.IsExist() {
+		err = s.DBPool.InsertRowsIntoDBWithRetry(
 			r.Context(),
 			metrics,
 		)
