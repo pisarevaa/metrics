@@ -187,7 +187,7 @@ func (s *Handler) StoreMetricsJSON(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-func (s *Handler) StoreMetricsJSONBatches(w http.ResponseWriter, r *http.Request) { //nolint:funlen,gocognit
+func (s *Handler) StoreMetricsJSONBatches(w http.ResponseWriter, r *http.Request) {
 	var metrics []Metrics
 	var buf bytes.Buffer
 	_, err := buf.ReadFrom(r.Body)
@@ -233,27 +233,14 @@ func (s *Handler) StoreMetricsJSONBatches(w http.ResponseWriter, r *http.Request
 	}
 
 	if s.DBPool != nil {
-		tx, errTx := s.DBPool.Begin(r.Context())
-		if errTx != nil {
-			http.Error(w, errTx.Error(), http.StatusInternalServerError)
-			return
-		}
-		now := time.Now()
-		for _, metric := range metrics {
-			err = InsertRowIntoDDB(
-				r.Context(),
-				s.DBPool,
-				metric,
-				now,
-			)
-			if err != nil {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-				return
-			}
-		}
-		errTx = tx.Commit(r.Context())
-		if errTx != nil {
-			http.Error(w, errTx.Error(), http.StatusInternalServerError)
+		err = InsertRowsIntoDDWithRetry(
+			r.Context(),
+			s.DBPool,
+			metrics,
+		)
+		if err != nil {
+			s.Logger.Error(err)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 	}

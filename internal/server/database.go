@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -37,6 +38,56 @@ func RestoreMetricsFromDB(dbpool *pgxpool.Pool, storage *MemStorage) error {
 			return err
 		}
 		storage.Store(m)
+	}
+	return nil
+}
+
+func InsertRowsIntoDDB(ctx context.Context, dbpool *pgxpool.Pool, metrics []Metrics) error {
+	tx, errTx := dbpool.Begin(ctx)
+	if errTx != nil {
+		return errTx
+	}
+	now := time.Now()
+	for _, metric := range metrics {
+		err := InsertRowIntoDDB(
+			ctx,
+			dbpool,
+			metric,
+			now,
+		)
+		if err != nil {
+			return err
+		}
+	}
+	errTx = tx.Commit(ctx)
+	if errTx != nil {
+		return errTx
+	}
+	return nil
+}
+
+func InsertRowsIntoDDWithRetry(ctx context.Context, dbpool *pgxpool.Pool, metrics []Metrics) error {
+	retries := 3
+	timeouts := map[int]int{1: 5, 2: 3, 3: 1} //nolint:gomnd // omit
+	for retries > 0 {
+		err := InsertRowsIntoDDB(
+			ctx,
+			dbpool,
+			metrics,
+		)
+		if err != nil { //nolint:nestif // omit
+			if strings.Contains(err.Error(), "failed to connect") {
+				time.Sleep(time.Duration(timeouts[retries]) * time.Second)
+				retries--
+				if retries == 0 {
+					return err
+				}
+			} else {
+				return err
+			}
+		} else {
+			break
+		}
 	}
 	return nil
 }

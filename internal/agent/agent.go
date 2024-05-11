@@ -9,6 +9,7 @@ import (
 	"math/big"
 	"reflect"
 	"runtime"
+	"strings"
 	"sync"
 	"time"
 )
@@ -187,13 +188,25 @@ func (s *Service) makeHTTPRequest(metrics []Metrics) {
 		s.Logger.Error(err)
 		return
 	}
-	_, err = s.Client.R().
-		SetHeader("Content-Type", "application/json").
-		SetHeader("Content-Encoding", "gzip").
-		SetBody(buf).
-		Post(requestURL)
-	if err != nil {
-		s.Logger.Error("error making http request: ", err)
+	retries := 3
+	timeouts := map[int]int{1: 5, 2: 3, 3: 1} //nolint:gomnd // omit
+	for retries > 0 {
+		_, err = s.Client.R().
+			SetHeader("Content-Type", "application/json").
+			SetHeader("Content-Encoding", "gzip").
+			SetBody(buf).
+			Post(requestURL)
+		if err != nil {
+			s.Logger.Error("error making http request: ", err)
+			if strings.Contains(err.Error(), "connect: connection refused") {
+				time.Sleep(time.Duration(timeouts[retries]) * time.Second)
+				retries--
+			} else {
+				break
+			}
+		} else {
+			break
+		}
 	}
 }
 
