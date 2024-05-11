@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/jackc/pgx/v5/pgxpool"
 	"go.uber.org/zap"
 )
 
@@ -18,7 +17,7 @@ type Handler struct {
 	Storage *MemStorage
 	Config  Config
 	Logger  *zap.SugaredLogger
-	DBPool  *pgxpool.Pool
+	DBPool  *DBPool
 }
 
 type Metrics struct {
@@ -38,7 +37,7 @@ const (
 	counter = "counter"
 )
 
-func NewHandler(storage *MemStorage, config Config, logger *zap.SugaredLogger, dbpool *pgxpool.Pool) *Handler {
+func NewHandler(storage *MemStorage, config Config, logger *zap.SugaredLogger, dbpool *DBPool) *Handler {
 	return &Handler{
 		Storage: storage,
 		Config:  config,
@@ -52,8 +51,7 @@ func (s *Handler) Ping(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "DBPool is not initialized!", http.StatusInternalServerError)
 		return
 	}
-	var one int
-	err := s.DBPool.QueryRow(r.Context(), "select 1").Scan(&one)
+	err := s.DBPool.Ping(r.Context())
 	if err != nil {
 		http.Error(w, "DBPool is not initialized!", http.StatusInternalServerError)
 		return
@@ -151,9 +149,8 @@ func (s *Handler) StoreMetricsJSON(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if s.DBPool != nil {
-		err = InsertRowIntoDDB(
+		err = s.DBPool.InsertRowIntoDB(
 			r.Context(),
-			s.DBPool,
 			metric,
 			time.Now(),
 		)
@@ -233,9 +230,8 @@ func (s *Handler) StoreMetricsJSONBatches(w http.ResponseWriter, r *http.Request
 	}
 
 	if s.DBPool != nil {
-		err = InsertRowsIntoDDWithRetry(
+		err = s.DBPool.InsertRowsIntoDDWithRetry(
 			r.Context(),
-			s.DBPool,
 			metrics,
 		)
 		if err != nil {

@@ -400,3 +400,22 @@ func (suite *ServerTestSuite) TestServerUpdateAndGetMetricsWithGZIP() {
 		}
 	}
 }
+
+// func (suite *ServerTestSuite) TestPing() {
+// 	storage := server.NewMemStorageRepo()
+// 	ctrl := gomock.NewController(suite.T())
+// 	defer ctrl.Finish()
+
+// 	m := mock.NewMockMetricsModel(ctrl)
+
+// 	m.EXPECT().
+// 	Ping(gomock.Any()).
+// 	Return(nil)
+
+// 	ts := httptest.NewServer(server.MetricsRouter(suite.config, suite.logger, storage, m))
+// 	defer ts.Close()
+
+// 	resp, _ := testRequest(suite, ts, "GET", "/ping", "")
+// 	defer resp.Body.Close()
+// 	suite.Require().Equal(200, resp.StatusCode)
+// }

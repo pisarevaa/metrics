@@ -9,6 +9,18 @@ import (
 	"go.uber.org/zap"
 )
 
+type MetricsModel interface {
+	Ping(ctx context.Context) (err error)
+	RestoreMetricsFromDB(storage *MemStorage) (err error)
+	InsertRowsIntoDB(ctx context.Context, metrics []Metrics) (err error)
+	InsertRowsIntoDDWithRetry(ctx context.Context, metrics []Metrics) (err error)
+	InsertRowIntoDB(ctx context.Context, metric Metrics, now time.Time) (err error)
+}
+
+type DBPool struct {
+	*pgxpool.Pool
+}
+
 func CreateMerticsTable(dbpool *pgxpool.Pool) error {
 	_, err := dbpool.Exec(context.Background(), `
 		CREATE TABLE IF NOT EXISTS metrics (
@@ -25,7 +37,16 @@ func CreateMerticsTable(dbpool *pgxpool.Pool) error {
 	return nil
 }
 
-func RestoreMetricsFromDB(dbpool *pgxpool.Pool, storage *MemStorage) error {
+func (dbpool *DBPool) Ping(ctx context.Context) error {
+	var one int
+	err := dbpool.QueryRow(ctx, "select 1").Scan(&one)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (dbpool *DBPool) RestoreMetricsFromDB(storage *MemStorage) error {
 	rows, err := dbpool.Query(context.Background(), "SELECT id, type, delta, value FROM metrics")
 	if err != nil {
 		return err
@@ -42,16 +63,15 @@ func RestoreMetricsFromDB(dbpool *pgxpool.Pool, storage *MemStorage) error {
 	return nil
 }
 
-func InsertRowsIntoDDB(ctx context.Context, dbpool *pgxpool.Pool, metrics []Metrics) error {
+func (dbpool *DBPool) InsertRowsIntoDB(ctx context.Context, metrics []Metrics) error {
 	tx, errTx := dbpool.Begin(ctx)
 	if errTx != nil {
 		return errTx
 	}
 	now := time.Now()
 	for _, metric := range metrics {
-		err := InsertRowIntoDDB(
+		err := dbpool.InsertRowIntoDB(
 			ctx,
-			dbpool,
 			metric,
 			now,
 		)
@@ -66,13 +86,12 @@ func InsertRowsIntoDDB(ctx context.Context, dbpool *pgxpool.Pool, metrics []Metr
 	return nil
 }
 
-func InsertRowsIntoDDWithRetry(ctx context.Context, dbpool *pgxpool.Pool, metrics []Metrics) error {
+func (dbpool *DBPool) InsertRowsIntoDDWithRetry(ctx context.Context, metrics []Metrics) error {
 	retries := 3
 	timeouts := map[int]int{1: 5, 2: 3, 3: 1} //nolint:gomnd // omit
 	for retries > 0 {
-		err := InsertRowsIntoDDB(
+		err := dbpool.InsertRowsIntoDB(
 			ctx,
-			dbpool,
 			metrics,
 		)
 		if err != nil { //nolint:nestif // omit
@@ -92,7 +111,7 @@ func InsertRowsIntoDDWithRetry(ctx context.Context, dbpool *pgxpool.Pool, metric
 	return nil
 }
 
-func InsertRowIntoDDB(ctx context.Context, dbpool *pgxpool.Pool, metric Metrics, now time.Time) error {
+func (dbpool *DBPool) InsertRowIntoDB(ctx context.Context, metric Metrics, now time.Time) error {
 	_, err := dbpool.Exec(ctx, `
 			INSERT INTO metrics (id, type, delta, value, updated_at)
 			VALUES ($1, $2, $3, $4, $5)
@@ -109,7 +128,7 @@ func InsertRowIntoDDB(ctx context.Context, dbpool *pgxpool.Pool, metric Metrics,
 	return nil
 }
 
-func ConnectDB(config Config, logger *zap.SugaredLogger) *pgxpool.Pool {
+func ConnectDB(config Config, logger *zap.SugaredLogger) *DBPool {
 	if config.DatabaseDSN == "" {
 		return nil
 	}
@@ -123,5 +142,6 @@ func ConnectDB(config Config, logger *zap.SugaredLogger) *pgxpool.Pool {
 		logger.Error("Unable to create table metrics: %v", err)
 		return nil
 	}
-	return dbpool
+	db := &DBPool{dbpool}
+	return db
 }

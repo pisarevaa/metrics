@@ -2,7 +2,6 @@ package server
 
 import (
 	"github.com/go-chi/chi/v5"
-	"github.com/jackc/pgx/v5/pgxpool"
 	"go.uber.org/zap"
 )
 
@@ -10,7 +9,7 @@ func MetricsRouter(
 	config Config,
 	logger *zap.SugaredLogger,
 	storage *MemStorage,
-	dbpool *pgxpool.Pool,
+	dbpool *DBPool,
 ) chi.Router {
 	if config.Restore {
 		err := storage.LoadFromDosk(config.FileStoragePath)
@@ -19,7 +18,7 @@ func MetricsRouter(
 		}
 	}
 	if dbpool != nil {
-		err := RestoreMetricsFromDB(dbpool, storage)
+		err := dbpool.RestoreMetricsFromDB(storage)
 		if err != nil {
 			logger.Error(err)
 		}
