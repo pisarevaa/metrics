@@ -2,7 +2,6 @@ package server
 
 import (
 	"context"
-	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -14,7 +13,6 @@ type MetricsModel interface {
 	Ping(ctx context.Context) (err error)
 	RestoreMetricsFromDB(storage *MemStorage) (err error)
 	InsertRowsIntoDB(ctx context.Context, metrics []Metrics) (err error)
-	InsertRowsIntoDBWithRetry(ctx context.Context, metrics []Metrics) (err error)
 	InsertRowIntoDB(ctx context.Context, metric Metrics, now time.Time) (err error)
 }
 
@@ -87,31 +85,6 @@ func (dbpool *DBPool) InsertRowsIntoDB(ctx context.Context, metrics []Metrics) e
 	errTx = tx.Commit(ctx)
 	if errTx != nil {
 		return errTx
-	}
-	return nil
-}
-
-func (dbpool *DBPool) InsertRowsIntoDBWithRetry(ctx context.Context, metrics []Metrics) error {
-	retries := 3
-	timeouts := map[int]int{1: 5, 2: 3, 3: 1} //nolint:gomnd // omit
-	for retries > 0 {
-		err := dbpool.InsertRowsIntoDB(
-			ctx,
-			metrics,
-		)
-		if err != nil { //nolint:nestif // omit
-			if strings.Contains(err.Error(), "failed to connect") {
-				time.Sleep(time.Duration(timeouts[retries]) * time.Second)
-				retries--
-				if retries == 0 {
-					return err
-				}
-			} else {
-				return err
-			}
-		} else {
-			break
-		}
 	}
 	return nil
 }

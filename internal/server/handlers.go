@@ -230,7 +230,7 @@ func (s *Handler) StoreMetricsJSONBatches(w http.ResponseWriter, r *http.Request
 	}
 
 	if s.DBPool.IsExist() {
-		err = s.DBPool.InsertRowsIntoDBWithRetry(
+		err = s.DBPool.InsertRowsIntoDB(
 			r.Context(),
 			metrics,
 		)

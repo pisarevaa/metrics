@@ -64,20 +64,6 @@ func (mr *MockMetricsModelMockRecorder) InsertRowsIntoDB(ctx, metrics interface{
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InsertRowsIntoDB", reflect.TypeOf((*MockMetricsModel)(nil).InsertRowsIntoDB), ctx, metrics)
 }
 
-// InsertRowsIntoDBWithRetry mocks base method.
-func (m *MockMetricsModel) InsertRowsIntoDBWithRetry(ctx context.Context, metrics []server.Metrics) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "InsertRowsIntoDBWithRetry", ctx, metrics)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// InsertRowsIntoDBWithRetry indicates an expected call of InsertRowsIntoDBWithRetry.
-func (mr *MockMetricsModelMockRecorder) InsertRowsIntoDBWithRetry(ctx, metrics interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InsertRowsIntoDBWithRetry", reflect.TypeOf((*MockMetricsModel)(nil).InsertRowsIntoDBWithRetry), ctx, metrics)
-}
-
 // IsExist mocks base method.
 func (m *MockMetricsModel) IsExist() bool {
 	m.ctrl.T.Helper()

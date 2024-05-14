@@ -466,7 +466,7 @@ func (suite *ServerTestSuite) TestServerUpdateAndGetMetricsJSONBatch() {
 	m := mock.NewMockMetricsModel(ctrl)
 
 	m.EXPECT().
-		InsertRowsIntoDBWithRetry(gomock.Any(), gomock.Any()).
+		InsertRowsIntoDB(gomock.Any(), gomock.Any()).
 		Return(nil)
 	m.EXPECT().
 		IsExist().

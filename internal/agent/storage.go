@@ -19,10 +19,12 @@ func NewMemStorageRepo() *MemStorage {
 	}
 }
 
-func (ms *MemStorage) StoreGauge(metricName string, value float64) {
+func (ms *MemStorage) StoreGauge(metrics map[string]float64) {
 	ms.mx.Lock()
 	defer ms.mx.Unlock()
-	ms.Gauge[metricName] = value
+	for key, value := range metrics {
+		ms.Gauge[key] = value
+	}
 }
 
 func (ms *MemStorage) StoreCounter() {
