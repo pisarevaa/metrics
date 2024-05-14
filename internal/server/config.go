@@ -22,12 +22,7 @@ func GetConfig() Config {
 	flag.IntVar(&config.StoreInterval, "i", 300, "interval in sec to store metrics")
 	flag.StringVar(&config.FileStoragePath, "f", "/tmp/metrics-db.json", "path to save metrics")
 	flag.BoolVar(&config.Restore, "r", true, "retore previous metrics data")
-	flag.StringVar(
-		&config.DatabaseDSN,
-		"d",
-		"postgres://metrics:CC7B02B06C4C1CF81FAE7D8C46C429EC@localhost:5432/metrics?sslmode=disable",
-		"database dsn",
-	)
+	flag.StringVar(&config.DatabaseDSN, "d", "", "database dsn")
 	flag.Parse()
 	if len(flag.Args()) > 0 {
 		log.Fatal("used not declared arguments")
