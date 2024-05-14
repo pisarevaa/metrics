@@ -19,6 +19,9 @@ func NewClient() *resty.Client {
 		SetRetryMaxWaitTime(retryMaxWaitTime * time.Second).
 		AddRetryCondition(
 			func(_ *resty.Response, err error) bool {
+				if err == nil {
+					return false
+				}
 				return strings.Contains(err.Error(), "connect: connection refused")
 			},
 		)

@@ -14,7 +14,7 @@ func main() {
 	config := server.GetConfig()
 	logger := server.GetLogger()
 	storage := server.NewMemStorageRepo()
-	dbpool := server.ConnectDB(config, logger)
+	dbpool := server.NewDBPool(config, logger)
 	if dbpool != nil {
 		defer dbpool.Close()
 	}

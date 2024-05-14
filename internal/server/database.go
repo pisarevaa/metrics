@@ -20,22 +20,6 @@ type DBPool struct {
 	*pgxpool.Pool
 }
 
-func CreateMerticsTable(dbpool *pgxpool.Pool) error {
-	_, err := dbpool.Exec(context.Background(), `
-		CREATE TABLE IF NOT EXISTS metrics (
-			"id" VARCHAR(250) PRIMARY KEY,
-			"type" VARCHAR(50) NOT NULL,
-			"delta" INTEGER NULL,
-			"value" DOUBLE PRECISION NULL,
-			"updated_at" TIMESTAMPTZ NOT NULL DEFAULT NOW()
-		) 
-	`)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
 func (dbpool *DBPool) IsExist() bool {
 	return dbpool != nil
 }
@@ -106,18 +90,13 @@ func (dbpool *DBPool) InsertRowIntoDB(ctx context.Context, metric Metrics, now t
 	return nil
 }
 
-func ConnectDB(config Config, logger *zap.SugaredLogger) *DBPool {
+func NewDBPool(config Config, logger *zap.SugaredLogger) *DBPool {
 	if config.DatabaseDSN == "" {
 		return nil
 	}
 	dbpool, err := pgxpool.New(context.Background(), config.DatabaseDSN)
 	if err != nil {
 		logger.Error("Unable to create connection pool: %v", err)
-		return nil
-	}
-	err = CreateMerticsTable(dbpool)
-	if err != nil {
-		logger.Error("Unable to create table metrics: %v", err)
 		return nil
 	}
 	db := &DBPool{dbpool}
