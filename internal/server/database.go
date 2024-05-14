@@ -107,12 +107,10 @@ func NewDBPool(config Config, logger *zap.SugaredLogger) *DBPool {
 		config.DatabaseDSN)
 	if err != nil {
 		logger.Error("Unable to migrate tables: ", err)
-		return nil
 	}
 	err = m.Up()
 	if err != nil {
 		logger.Error("Unable to migrate tables: ", err)
-		return nil
 	}
 	db := &DBPool{dbpool}
 	return db
