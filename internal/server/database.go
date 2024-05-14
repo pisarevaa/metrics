@@ -4,6 +4,9 @@ import (
 	"context"
 	"time"
 
+	"github.com/golang-migrate/migrate/v4"
+	_ "github.com/golang-migrate/migrate/v4/database/postgres" // postgres driver
+	_ "github.com/golang-migrate/migrate/v4/source/file"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"go.uber.org/zap"
 )
@@ -97,6 +100,18 @@ func NewDBPool(config Config, logger *zap.SugaredLogger) *DBPool {
 	dbpool, err := pgxpool.New(context.Background(), config.DatabaseDSN)
 	if err != nil {
 		logger.Error("Unable to create connection pool: %v", err)
+		return nil
+	}
+	m, err := migrate.New(
+		"file://migrations",
+		config.DatabaseDSN)
+	if err != nil {
+		logger.Error("Unable to migrate tables: ", err)
+		return nil
+	}
+	err = m.Up()
+	if err != nil {
+		logger.Error("Unable to migrate tables: ", err)
 		return nil
 	}
 	db := &DBPool{dbpool}

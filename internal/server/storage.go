@@ -24,14 +24,14 @@ func NewMemStorageRepo() *MemStorage {
 func (ms *MemStorage) Store(metric Metrics) (float64, int64) {
 	ms.mx.Lock()
 	defer ms.mx.Unlock()
-	if metric.MType == gauge {
+	if metric.MType == Gauge {
 		if metric.Value == nil {
 			ms.Gauge[metric.ID] = 0.0
 		} else {
 			ms.Gauge[metric.ID] = *metric.Value
 		}
 	}
-	if metric.MType == counter {
+	if metric.MType == Counter {
 		if metric.Delta != nil {
 			ms.Counter[metric.ID] += *metric.Delta
 		}
@@ -80,14 +80,14 @@ func (ms *MemStorage) LoadFromDosk(filename string) error {
 }
 
 func (ms *MemStorage) Get(query QueryMetrics) (*float64, *int64, error) {
-	if query.MType == gauge {
+	if query.MType == Gauge {
 		value, ok := ms.Gauge[query.ID]
 		if !ok {
 			return nil, nil, errors.New("metric is not found")
 		}
 		return &value, nil, nil
 	}
-	if query.MType == counter {
+	if query.MType == Counter {
 		value, ok := ms.Counter[query.ID]
 		if !ok {
 			return nil, nil, errors.New("metric is not found")

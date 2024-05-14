@@ -33,8 +33,8 @@ type QueryMetrics struct {
 }
 
 const (
-	gauge   = "gauge"
-	counter = "counter"
+	Gauge   = "gauge"
+	Counter = "counter"
 )
 
 func NewHandler(storage *MemStorage, config Config, logger *zap.SugaredLogger, dbpool MetricsModel) *Handler {
@@ -64,7 +64,7 @@ func (s *Handler) StoreMetrics(w http.ResponseWriter, r *http.Request) {
 	metricName := chi.URLParam(r, "metricName")
 	metricValue := chi.URLParam(r, "metricValue")
 
-	if !(metricType == gauge || metricType == counter) {
+	if !(metricType == Gauge || metricType == Counter) {
 		http.Error(w, "Only 'gauge' and 'counter' values are not allowed!", http.StatusBadRequest)
 		return
 	}
@@ -82,7 +82,7 @@ func (s *Handler) StoreMetrics(w http.ResponseWriter, r *http.Request) {
 		MType: metricType,
 	}
 
-	if metricType == gauge {
+	if metricType == Gauge {
 		floatValue, err := strconv.ParseFloat(metricValue, 64)
 		if err != nil {
 			http.Error(w, "metricValue is not corect float", http.StatusBadRequest)
@@ -90,7 +90,7 @@ func (s *Handler) StoreMetrics(w http.ResponseWriter, r *http.Request) {
 		}
 		metric.Value = &floatValue
 	}
-	if metricType == counter {
+	if metricType == Counter {
 		intValue, err := strconv.ParseInt(metricValue, 10, 64)
 		if err != nil {
 			http.Error(w, "metricValue is not correct integer", http.StatusBadRequest)
@@ -121,7 +121,7 @@ func (s *Handler) StoreMetricsJSON(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if !(metric.MType == gauge || metric.MType == counter) {
+	if !(metric.MType == Gauge || metric.MType == Counter) {
 		http.Error(w, "Only 'gauge' and 'counter' values are allowed!", http.StatusBadRequest)
 		return
 	}
@@ -129,11 +129,11 @@ func (s *Handler) StoreMetricsJSON(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Empty metric id is not allowed!", http.StatusNotFound)
 		return
 	}
-	if metric.MType == gauge && metric.Value == nil {
+	if metric.MType == Gauge && metric.Value == nil {
 		http.Error(w, "Empty metric Value is not allowed!", http.StatusBadRequest)
 		return
 	}
-	if metric.MType == counter && metric.Delta == nil {
+	if metric.MType == Counter && metric.Delta == nil {
 		http.Error(w, "Empty metric Delta is not allowed!", http.StatusBadRequest)
 		return
 	}
@@ -200,7 +200,7 @@ func (s *Handler) StoreMetricsJSONBatches(w http.ResponseWriter, r *http.Request
 	}
 
 	for _, metric := range metrics {
-		if !(metric.MType == gauge || metric.MType == counter) {
+		if !(metric.MType == Gauge || metric.MType == Counter) {
 			http.Error(w, "Only 'gauge' and 'counter' values are allowed!", http.StatusBadRequest)
 			return
 		}
@@ -208,12 +208,12 @@ func (s *Handler) StoreMetricsJSONBatches(w http.ResponseWriter, r *http.Request
 			http.Error(w, "Empty metric id is not allowed!", http.StatusNotFound)
 			return
 		}
-		if metric.MType == gauge && metric.Value == nil {
+		if metric.MType == Gauge && metric.Value == nil {
 			s.Logger.Error("Empty metric Value is not allowed!")
 			http.Error(w, "Empty metric Value is not allowed!", http.StatusBadRequest)
 			return
 		}
-		if metric.MType == counter && metric.Delta == nil {
+		if metric.MType == Counter && metric.Delta == nil {
 			s.Logger.Error("Empty metric Delta is not allowed!")
 			http.Error(w, "Empty metric Delta is not allowed!", http.StatusBadRequest)
 			return
@@ -251,7 +251,7 @@ func (s *Handler) GetMetric(w http.ResponseWriter, r *http.Request) {
 	metricType := chi.URLParam(r, "metricType")
 	metricName := chi.URLParam(r, "metricName")
 
-	if !(metricType == gauge || metricType == counter) {
+	if !(metricType == Gauge || metricType == Counter) {
 		http.Error(w, "Only 'gauge' and 'counter' values are allowed!", http.StatusBadRequest)
 		return
 	}
@@ -271,7 +271,7 @@ func (s *Handler) GetMetric(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusNotFound)
 	}
 
-	if metricType == gauge && value != nil {
+	if metricType == Gauge && value != nil {
 		valueString := strconv.FormatFloat(*value, 'f', -1, 64)
 		_, errWtrite := io.WriteString(w, valueString)
 		if errWtrite != nil {
@@ -279,7 +279,7 @@ func (s *Handler) GetMetric(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	if metricType == counter && delta != nil {
+	if metricType == Counter && delta != nil {
 		valueString := strconv.FormatInt(*delta, 10)
 		_, errWtrite := io.WriteString(w, valueString)
 		if errWtrite != nil {
@@ -304,7 +304,7 @@ func (s *Handler) GetMetricJSON(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if !(query.MType == gauge || query.MType == counter) {
+	if !(query.MType == Gauge || query.MType == Counter) {
 		http.Error(w, "Only 'gauge' and 'counter' values are not allowed!", http.StatusBadRequest)
 		return
 	}
