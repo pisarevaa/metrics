@@ -95,7 +95,7 @@ func (s *Handler) StoreMetrics(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-func (s *Handler) StoreMetricsJSON(w http.ResponseWriter, r *http.Request) {
+func (s *Handler) StoreMetricsJSON(w http.ResponseWriter, r *http.Request) { //nolint:funlen /// TODO: refactor
 	var metric storage.Metrics
 	var buf bytes.Buffer
 	_, err := buf.ReadFrom(r.Body)
