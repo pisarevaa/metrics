@@ -41,7 +41,7 @@ func (ms *MemStorage) GetMetrics() []Metrics {
 		payload := Metrics{
 			ID:    metric,
 			MType: gauge,
-			Value: value, // #nosec G601 - проблема ичезнет в go 1.22
+			Value: value,
 		}
 		metrics = append(metrics, payload)
 	}
@@ -49,7 +49,7 @@ func (ms *MemStorage) GetMetrics() []Metrics {
 		payload := Metrics{
 			ID:    metric,
 			MType: counter,
-			Delta: value, // #nosec G601 - проблема ичезнет в go 1.22
+			Delta: value,
 		}
 		metrics = append(metrics, payload)
 	}

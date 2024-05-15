@@ -63,18 +63,18 @@ func (mr *MockStorageMockRecorder) GetAllMetrics(ctx interface{}) *gomock.Call {
 }
 
 // GetMetric mocks base method.
-func (m *MockStorage) GetMetric(ctx context.Context, name string) (storage.Metrics, error) {
+func (m *MockStorage) GetMetric(ctx context.Context, id, mtype string) (storage.Metrics, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetMetric", ctx, name)
+	ret := m.ctrl.Call(m, "GetMetric", ctx, id, mtype)
 	ret0, _ := ret[0].(storage.Metrics)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetMetric indicates an expected call of GetMetric.
-func (mr *MockStorageMockRecorder) GetMetric(ctx, name interface{}) *gomock.Call {
+func (mr *MockStorageMockRecorder) GetMetric(ctx, id, mtype interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetMetric", reflect.TypeOf((*MockStorage)(nil).GetMetric), ctx, name)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetMetric", reflect.TypeOf((*MockStorage)(nil).GetMetric), ctx, id, mtype)
 }
 
 // Ping mocks base method.

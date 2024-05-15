@@ -243,7 +243,7 @@ func (s *Handler) GetMetric(w http.ResponseWriter, r *http.Request) {
 		MType: metricType,
 	}
 
-	metric, err := s.Storage.GetMetric(r.Context(), query.ID)
+	metric, err := s.Storage.GetMetric(r.Context(), query.ID, query.MType)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusNotFound)
 		return
@@ -291,7 +291,7 @@ func (s *Handler) GetMetricJSON(w http.ResponseWriter, r *http.Request) {
 	}
 	s.Logger.Info(query.MType, query.ID)
 
-	metric, err := s.Storage.GetMetric(r.Context(), query.ID)
+	metric, err := s.Storage.GetMetric(r.Context(), query.ID, query.MType)
 	if err != nil {
 		s.Logger.Error(err)
 		http.Error(w, err.Error(), http.StatusNotFound)

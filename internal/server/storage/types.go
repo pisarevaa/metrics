@@ -5,7 +5,7 @@ import (
 )
 
 type Storage interface {
-	GetMetric(ctx context.Context, name string) (metric Metrics, err error)
+	GetMetric(ctx context.Context, id string, mtype string) (metric Metrics, err error)
 	GetAllMetrics(ctx context.Context) (metric []Metrics, err error)
 	StoreMetrics(ctx context.Context, metrics []Metrics) (err error)
 	StoreMetric(ctx context.Context, metric Metrics) (err error)

@@ -45,23 +45,27 @@ func (ms *MemStorage) StoreMetrics(_ context.Context, metrics []Metrics) error {
 	return nil
 }
 
-func (ms *MemStorage) GetMetric(_ context.Context, name string) (Metrics, error) {
-	for metric, value := range ms.Gauge {
-		if metric == name {
-			return Metrics{
-				ID:    metric,
-				MType: Gauge,
-				Value: value,
-			}, nil
+func (ms *MemStorage) GetMetric(_ context.Context, id string, mtype string) (Metrics, error) {
+	if mtype == Gauge {
+		for metric, value := range ms.Gauge {
+			if metric == id {
+				return Metrics{
+					ID:    metric,
+					MType: Gauge,
+					Value: value,
+				}, nil
+			}
 		}
 	}
-	for metric, value := range ms.Counter {
-		if metric == name {
-			return Metrics{
-				ID:    metric,
-				MType: Counter,
-				Delta: value,
-			}, nil
+	if mtype == Counter {
+		for metric, value := range ms.Counter {
+			if metric == id {
+				return Metrics{
+					ID:    metric,
+					MType: Counter,
+					Delta: value,
+				}, nil
+			}
 		}
 	}
 	return Metrics{}, errors.New("metric is not found")

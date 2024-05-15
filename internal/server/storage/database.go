@@ -72,14 +72,13 @@ func (dbpool *DBStorage) StoreMetrics(ctx context.Context, metrics []Metrics) er
 	return nil
 }
 
-func (dbpool *DBStorage) GetMetric(ctx context.Context, name string) (Metrics, error) {
+func (dbpool *DBStorage) GetMetric(ctx context.Context, id string, mtype string) (Metrics, error) {
 	var m Metrics
-	err := dbpool.QueryRow(ctx, "SELECT id, type, delta, value FROM metrics WHERE id = $1", name).
+	err := dbpool.QueryRow(ctx, "SELECT id, type, delta, value FROM metrics WHERE id = $1 and type = $2", id, mtype).
 		Scan(&m.ID, &m.MType, &m.Delta, &m.Value)
 	if err != nil {
 		return m, err
 	}
-
 	return m, nil
 }
 
