@@ -23,16 +23,10 @@ func (ms *MemStorage) StoreMetric(_ context.Context, metric Metrics) error {
 	ms.mx.Lock()
 	defer ms.mx.Unlock()
 	if metric.MType == Gauge {
-		if metric.Value == nil {
-			ms.Gauge[metric.ID] = 0.0
-		} else {
-			ms.Gauge[metric.ID] = *metric.Value
-		}
+		ms.Gauge[metric.ID] = metric.Value
 	}
 	if metric.MType == Counter {
-		if metric.Delta != nil {
-			ms.Counter[metric.ID] += *metric.Delta
-		}
+		ms.Counter[metric.ID] += metric.Delta
 	}
 	return nil
 }
@@ -42,16 +36,10 @@ func (ms *MemStorage) StoreMetrics(_ context.Context, metrics []Metrics) error {
 	defer ms.mx.Unlock()
 	for _, metric := range metrics {
 		if metric.MType == Gauge {
-			if metric.Value == nil {
-				ms.Gauge[metric.ID] = 0.0
-			} else {
-				ms.Gauge[metric.ID] = *metric.Value
-			}
+			ms.Gauge[metric.ID] = metric.Value
 		}
 		if metric.MType == Counter {
-			if metric.Delta != nil {
-				ms.Counter[metric.ID] += *metric.Delta
-			}
+			ms.Counter[metric.ID] += metric.Delta
 		}
 	}
 	return nil
@@ -63,7 +51,7 @@ func (ms *MemStorage) GetMetric(_ context.Context, name string) (Metrics, error)
 			return Metrics{
 				ID:    metric,
 				MType: Gauge,
-				Value: &value, // #nosec G601 - проблема ичезнет в go 1.22
+				Value: value,
 			}, nil
 		}
 	}
@@ -72,7 +60,7 @@ func (ms *MemStorage) GetMetric(_ context.Context, name string) (Metrics, error)
 			return Metrics{
 				ID:    metric,
 				MType: Counter,
-				Delta: &value, // #nosec G601 - проблема ичезнет в go 1.22
+				Delta: value,
 			}, nil
 		}
 	}
@@ -85,7 +73,7 @@ func (ms *MemStorage) GetAllMetrics(_ context.Context) ([]Metrics, error) {
 		payload := Metrics{
 			ID:    metric,
 			MType: Gauge,
-			Value: &value, // #nosec G601 - проблема ичезнет в go 1.22
+			Value: value,
 		}
 		metrics = append(metrics, payload)
 	}
@@ -93,7 +81,7 @@ func (ms *MemStorage) GetAllMetrics(_ context.Context) ([]Metrics, error) {
 		payload := Metrics{
 			ID:    metric,
 			MType: Counter,
-			Delta: &value, // #nosec G601 - проблема ичезнет в go 1.22
+			Delta: value,
 		}
 		metrics = append(metrics, payload)
 	}

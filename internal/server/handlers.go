@@ -72,7 +72,7 @@ func (s *Handler) StoreMetrics(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "metricValue is not corect float", http.StatusBadRequest)
 			return
 		}
-		metric.Value = &floatValue
+		metric.Value = floatValue
 	}
 	if metricType == storage.Counter {
 		intValue, err := strconv.ParseInt(metricValue, 10, 64)
@@ -80,7 +80,7 @@ func (s *Handler) StoreMetrics(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "metricValue is not correct integer", http.StatusBadRequest)
 			return
 		}
-		metric.Delta = &intValue
+		metric.Delta = intValue
 	}
 
 	err := s.Storage.StoreMetric(r.Context(), metric)
@@ -116,11 +116,11 @@ func (s *Handler) StoreMetricsJSON(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Empty metric id is not allowed!", http.StatusNotFound)
 		return
 	}
-	if metric.MType == storage.Gauge && metric.Value == nil {
+	if metric.MType == storage.Gauge && metric.Value == 0 {
 		http.Error(w, "Empty metric Value is not allowed!", http.StatusBadRequest)
 		return
 	}
-	if metric.MType == storage.Counter && metric.Delta == nil {
+	if metric.MType == storage.Counter && metric.Delta == 0 {
 		http.Error(w, "Empty metric Delta is not allowed!", http.StatusBadRequest)
 		return
 	}
@@ -186,12 +186,12 @@ func (s *Handler) StoreMetricsJSONBatches(w http.ResponseWriter, r *http.Request
 			http.Error(w, "Empty metric id is not allowed!", http.StatusNotFound)
 			return
 		}
-		if metric.MType == storage.Gauge && metric.Value == nil {
+		if metric.MType == storage.Gauge && metric.Value == 0 {
 			s.Logger.Error("Empty metric Value is not allowed!")
 			http.Error(w, "Empty metric Value is not allowed!", http.StatusBadRequest)
 			return
 		}
-		if metric.MType == storage.Counter && metric.Delta == nil {
+		if metric.MType == storage.Counter && metric.Delta == 0 {
 			s.Logger.Error("Empty metric Delta is not allowed!")
 			http.Error(w, "Empty metric Delta is not allowed!", http.StatusBadRequest)
 			return
@@ -243,7 +243,7 @@ func (s *Handler) GetMetric(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if query.MType == storage.Gauge {
-		valueString := strconv.FormatFloat(*metric.Value, 'f', -1, 64)
+		valueString := strconv.FormatFloat(metric.Value, 'f', -1, 64)
 		_, errWtrite := io.WriteString(w, valueString)
 		if errWtrite != nil {
 			http.Error(w, errWtrite.Error(), http.StatusBadRequest)
@@ -251,7 +251,7 @@ func (s *Handler) GetMetric(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	if query.MType == storage.Counter {
-		valueString := strconv.FormatInt(*metric.Delta, 10)
+		valueString := strconv.FormatInt(metric.Delta, 10)
 		_, errWtrite := io.WriteString(w, valueString)
 		if errWtrite != nil {
 			http.Error(w, errWtrite.Error(), http.StatusBadRequest)
@@ -313,9 +313,9 @@ func (s *Handler) GetAllMetrics(w http.ResponseWriter, r *http.Request) {
 	for _, value := range metrics {
 		var row string
 		if value.MType == storage.Gauge {
-			row = fmt.Sprintf("%v: %v\n", value.ID, *value.Value)
+			row = fmt.Sprintf("%v: %v\n", value.ID, value.Value)
 		} else {
-			row = fmt.Sprintf("%v: %v\n", value.ID, *value.Delta)
+			row = fmt.Sprintf("%v: %v\n", value.ID, value.Delta)
 		}
 		_, err = w.Write([]byte(row))
 		if err != nil {

@@ -223,7 +223,7 @@ func (suite *ServerTestSuite) TestServerUpdateAndGetMetricsJSON() {
 			want: want{
 				statusCode: 200,
 				json:       true,
-				response:   `{"id":"HeapAlloc","type":"gauge","value":1.25}`,
+				response:   `{"id":"HeapAlloc","type":"gauge","delta":0,"value":1.25}`,
 			},
 			url:    "/update/",
 			body:   `{"id": "HeapAlloc", "type": "gauge", "value": 1.25}`,
@@ -234,7 +234,7 @@ func (suite *ServerTestSuite) TestServerUpdateAndGetMetricsJSON() {
 			want: want{
 				statusCode: 200,
 				json:       true,
-				response:   `{"id":"PollCount","type":"counter","delta":4}`,
+				response:   `{"id":"PollCount","type":"counter","delta":4,"value":0}`,
 			},
 			url:    "/update/",
 			body:   `{"id": "PollCount", "type": "counter", "delta": 4}`,
@@ -278,7 +278,7 @@ func (suite *ServerTestSuite) TestServerUpdateAndGetMetricsJSON() {
 			want: want{
 				statusCode: 200,
 				json:       true,
-				response:   `{"id":"HeapAlloc","type":"gauge","value":1.25}`,
+				response:   `{"id":"HeapAlloc","type":"gauge","delta":0,"value":1.25}`,
 			},
 			url:    "/value/",
 			body:   `{"id": "HeapAlloc", "type": "gauge"}`,
@@ -344,7 +344,7 @@ func (suite *ServerTestSuite) TestServerUpdateAndGetMetricsWithGZIP() {
 			want: want{
 				statusCode: 200,
 				json:       true,
-				response:   `{"id":"HeapAlloc","type":"gauge","value":1.25}`,
+				response:   `{"id":"HeapAlloc","type":"gauge","delta":0,"value":1.25}`,
 			},
 			url:             "/update/",
 			body:            `{"id": "HeapAlloc", "type": "gauge", "value": 1.25}`,
@@ -357,7 +357,7 @@ func (suite *ServerTestSuite) TestServerUpdateAndGetMetricsWithGZIP() {
 			want: want{
 				statusCode: 200,
 				json:       true,
-				response:   `{"id":"HeapAlloc","type":"gauge","value":1.25}`,
+				response:   `{"id":"HeapAlloc","type":"gauge","delta":0,"value":1.25}`,
 			},
 			url:             "/update/",
 			body:            `{"id": "HeapAlloc", "type": "gauge", "value": 1.25}`,
@@ -370,7 +370,7 @@ func (suite *ServerTestSuite) TestServerUpdateAndGetMetricsWithGZIP() {
 			want: want{
 				statusCode: 200,
 				json:       true,
-				response:   `{"id":"HeapAlloc","type":"gauge","value":1.25}`,
+				response:   `{"id":"HeapAlloc","type":"gauge","delta":0,"value":1.25}`,
 			},
 			url:             "/update/",
 			body:            `{"id": "HeapAlloc", "type": "gauge", "value": 1.25}`,
@@ -383,7 +383,7 @@ func (suite *ServerTestSuite) TestServerUpdateAndGetMetricsWithGZIP() {
 			want: want{
 				statusCode: 200,
 				json:       true,
-				response:   `{"id":"HeapAlloc","type":"gauge","value":1.25}`,
+				response:   `{"id":"HeapAlloc","type":"gauge","delta":0,"value":1.25}`,
 			},
 			url:             "/value/",
 			body:            `{"id": "HeapAlloc", "type": "gauge"}`,
