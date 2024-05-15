@@ -385,6 +385,19 @@ func (suite *ServerTestSuite) TestServerUpdateAndGetMetricsWithGZIP() {
 			want: want{
 				statusCode: 200,
 				json:       true,
+				response:   `{"id":"HeapAlloc","type":"counter","delta":10}`,
+			},
+			url:             "/update/",
+			body:            `{"id": "HeapAlloc", "type": "counter", "delta": 10}`,
+			method:          "POST",
+			contentEncoding: "gzip",
+			acceptEncoding:  "gzip",
+		},
+		{
+			name: "add counter metric with gzip body and return",
+			want: want{
+				statusCode: 200,
+				json:       true,
 				response:   `{"id":"HeapAlloc","type":"counter","delta":20}`,
 			},
 			url:             "/update/",

@@ -142,7 +142,20 @@ func (s *Handler) StoreMetricsJSON(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	resp, err := json.Marshal(metric)
+	metricStored, err := s.Storage.GetMetric(r.Context(), metric.ID, metric.MType)
+	if err != nil {
+		s.Logger.Error(err)
+		http.Error(w, err.Error(), http.StatusNotFound)
+		return
+	}
+
+	var resp []byte
+	if metric.MType == storage.Gauge {
+		resp, err = json.Marshal(storage.GaugeMetrics{ID: metric.ID, MType: metric.MType, Value: metricStored.Value})
+	}
+	if metric.MType == storage.Counter {
+		resp, err = json.Marshal(storage.CounterMetrics{ID: metric.ID, MType: metric.MType, Delta: metricStored.Delta})
+	}
 	if err != nil {
 		s.Logger.Error(err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
