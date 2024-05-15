@@ -116,14 +116,18 @@ func (s *Handler) StoreMetricsJSON(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Empty metric id is not allowed!", http.StatusNotFound)
 		return
 	}
-	if metric.MType == storage.Gauge && metric.Value == 0 {
-		http.Error(w, "Empty metric Value is not allowed!", http.StatusBadRequest)
-		return
-	}
-	if metric.MType == storage.Counter && metric.Delta == 0 {
-		http.Error(w, "Empty metric Delta is not allowed!", http.StatusBadRequest)
-		return
-	}
+	// if metric.MType == storage.Gauge {
+	// 	if metric.Value == 0 {
+	// 		http.Error(w, "Empty metric Value is not allowed!", http.StatusBadRequest)
+	// 		return
+	// 	}
+	// }
+	// if metric.MType == storage.Counter {
+	// 	if metric.Delta == 0 {
+	// 		http.Error(w, "Empty metric Delta is not allowed!", http.StatusBadRequest)
+	// 		return
+	// 	}
+	// }
 
 	err = s.Storage.StoreMetric(r.Context(), metric)
 	if err != nil {
@@ -186,16 +190,18 @@ func (s *Handler) StoreMetricsJSONBatches(w http.ResponseWriter, r *http.Request
 			http.Error(w, "Empty metric id is not allowed!", http.StatusNotFound)
 			return
 		}
-		if metric.MType == storage.Gauge && metric.Value == 0 {
-			s.Logger.Error("Empty metric Value is not allowed!")
-			http.Error(w, "Empty metric Value is not allowed!", http.StatusBadRequest)
-			return
-		}
-		if metric.MType == storage.Counter && metric.Delta == 0 {
-			s.Logger.Error("Empty metric Delta is not allowed!")
-			http.Error(w, "Empty metric Delta is not allowed!", http.StatusBadRequest)
-			return
-		}
+		// if metric.MType == storage.Gauge {
+		// 	if metric.Value == 0 {
+		// 		http.Error(w, "Empty metric Value is not allowed!", http.StatusBadRequest)
+		// 		return
+		// 	}
+		// }
+		// if metric.MType == storage.Counter {
+		// 	if metric.Delta == 0 {
+		// 		http.Error(w, "Empty metric Delta is not allowed!", http.StatusBadRequest)
+		// 		return
+		// 	}
+		// }
 	}
 
 	err = s.Storage.StoreMetrics(r.Context(), metrics)
