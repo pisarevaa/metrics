@@ -20,6 +20,18 @@ type Metrics struct {
 	Value float64 `json:"value,omitempty"` // значение метрики в случае передачи gauge
 }
 
+type GaugeMetrics struct {
+	ID    string  `json:"id"`
+	MType string  `json:"type"`
+	Value float64 `json:"value"`
+}
+
+type CounterMetrics struct {
+	ID    string `json:"id"`
+	MType string `json:"type"`
+	Delta int64  `json:"delta"`
+}
+
 type QueryMetrics struct {
 	ID    string `json:"id"`
 	MType string `json:"type"`
