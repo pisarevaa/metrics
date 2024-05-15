@@ -240,28 +240,17 @@ func (suite *ServerTestSuite) TestServerUpdateAndGetMetricsJSON() {
 			body:   `{"id": "PollCount", "type": "counter", "delta": 4}`,
 			method: "POST",
 		},
-		// {
-		// 	name: "add wrong metric type",
-		// 	want: want{
-		// 		statusCode: 400,
-		// 		json:       true,
-		// 		response:   "",
-		// 	},
-		// 	url:    "/update/",
-		// 	body:   `{"id":"HeapAlloc","type":"test","value":1.25,"delta":0}`,
-		// 	method: "POST",
-		// },
-		// {
-		// 	name: "add empty metric value",
-		// 	want: want{
-		// 		statusCode: 400,
-		// 		json:       true,
-		// 		response:   "",
-		// 	},
-		// 	url:    "/update/",
-		// 	body:   `{"id": "HeapAlloc", "type": "counter"}`,
-		// 	method: "POST",
-		// },
+		{
+			name: "add wrong metric type",
+			want: want{
+				statusCode: 400,
+				json:       true,
+				response:   "",
+			},
+			url:    "/update/",
+			body:   `{"id":"HeapAlloc","type":"test","value":1.25,"delta":0}`,
+			method: "POST",
+		},
 		{
 			name: "add wrong metric value",
 			want: want{

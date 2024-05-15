@@ -299,14 +299,12 @@ func (s *Handler) GetMetricJSON(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var resp []byte
-
 	if query.MType == storage.Gauge {
 		resp, err = json.Marshal(storage.GaugeMetrics{ID: metric.ID, MType: metric.MType, Value: metric.Value})
 	}
 	if query.MType == storage.Counter {
 		resp, err = json.Marshal(storage.CounterMetrics{ID: metric.ID, MType: metric.MType, Delta: metric.Delta})
 	}
-	// resp, err := json.Marshal(metric)
 	if err != nil {
 		s.Logger.Error(err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)

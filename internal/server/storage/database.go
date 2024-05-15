@@ -41,7 +41,7 @@ func (dbpool *DBStorage) StoreMetric(ctx context.Context, metric Metrics) error 
 			ON CONFLICT (id) DO UPDATE
 			SET
 			type = excluded.type,
-			delta = excluded.delta,
+			delta = (SELECT delta FROM metrics WHERE id = $1) + excluded.delta,
 			value = excluded.value,
 			updated_at = excluded.updated_at
 		`, metric.ID, metric.MType, metric.Delta, metric.Value, now)
