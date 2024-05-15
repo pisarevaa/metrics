@@ -35,16 +35,16 @@ func (m *MockStorage) EXPECT() *MockStorageMockRecorder {
 	return m.recorder
 }
 
-// Close mocks base method.
-func (m *MockStorage) Close() {
+// CloseConnection mocks base method.
+func (m *MockStorage) CloseConnection() {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "Close")
+	m.ctrl.Call(m, "CloseConnection")
 }
 
-// Close indicates an expected call of Close.
-func (mr *MockStorageMockRecorder) Close() *gomock.Call {
+// CloseConnection indicates an expected call of CloseConnection.
+func (mr *MockStorageMockRecorder) CloseConnection() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Close", reflect.TypeOf((*MockStorage)(nil).Close))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CloseConnection", reflect.TypeOf((*MockStorage)(nil).CloseConnection))
 }
 
 // GetAllMetrics mocks base method.

@@ -10,7 +10,7 @@ type Storage interface {
 	StoreMetrics(ctx context.Context, metrics []Metrics) (err error)
 	StoreMetric(ctx context.Context, metric Metrics) (err error)
 	Ping(ctx context.Context) (err error)
-	Close()
+	CloseConnection()
 }
 
 type Metrics struct {

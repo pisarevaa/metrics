@@ -110,6 +110,6 @@ func (dbpool *DBStorage) Ping(ctx context.Context) error {
 	return nil
 }
 
-func (dbpool *DBStorage) Close() {
-	dbpool.Close() //nolint:staticcheck // strange warning
+func (dbpool *DBStorage) CloseConnection() {
+	dbpool.Close()
 }

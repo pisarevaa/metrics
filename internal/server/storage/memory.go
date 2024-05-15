@@ -104,4 +104,4 @@ func (ms *MemStorage) Ping(_ context.Context) error {
 	return nil
 }
 
-func (ms *MemStorage) Close() {}
+func (ms *MemStorage) CloseConnection() {}

@@ -20,7 +20,7 @@ func main() {
 	} else {
 		repo = storage.NewDBStorage(config.DatabaseDSN, logger)
 	}
-	defer repo.Close()
+	defer repo.CloseConnection()
 	logger.Info("Server is running on ", config.Host)
 	srv := &http.Server{
 		Addr:         config.Host,
