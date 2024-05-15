@@ -1,30 +1,29 @@
 package server
 
 import (
+	"context"
+
 	"github.com/go-chi/chi/v5"
+	"github.com/pisarevaa/metrics/internal/server/storage"
 	"go.uber.org/zap"
 )
 
 func MetricsRouter(
 	config Config,
 	logger *zap.SugaredLogger,
-	storage *MemStorage,
-	dbpool MetricsModel,
+	repo storage.Storage,
 ) chi.Router {
 	if config.Restore {
-		err := storage.LoadFromDosk(config.FileStoragePath)
+		metrics, err := LoadFromDosk(config.FileStoragePath)
+		if err != nil {
+			logger.Error(err)
+		}
+		err = repo.StoreMetrics(context.Background(), metrics)
 		if err != nil {
 			logger.Error(err)
 		}
 	}
-
-	if dbpool.IsExist() {
-		err := dbpool.RestoreMetricsFromDB(storage)
-		if err != nil {
-			logger.Error(err)
-		}
-	}
-	srv := NewHandler(storage, config, logger, dbpool)
+	srv := NewHandler(config, logger, repo)
 	r := chi.NewRouter()
 	r.Use(srv.HTTPLoggingMiddleware)
 	r.Use(srv.GzipMiddleware)

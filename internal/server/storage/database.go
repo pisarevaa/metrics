@@ -9,40 +9,31 @@ import (
 	_ "github.com/golang-migrate/migrate/v4/source/file"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"go.uber.org/zap"
-
-	"github.com/pisarevaa/metrics/internal/server"
 )
 
 type DBStorage struct {
 	*pgxpool.Pool
 }
 
-func NewDBStorage(config server.Config, logger *zap.SugaredLogger) *DBStorage {
-	if config.DatabaseDSN == "" {
-		return nil
-	}
-	dbpool, err := pgxpool.New(context.Background(), config.DatabaseDSN)
+func NewDBStorage(dsn string, logger *zap.SugaredLogger) *DBStorage {
+	dbpool, err := pgxpool.New(context.Background(), dsn)
 	if err != nil {
 		logger.Error("Unable to create connection pool: %v", err)
 		return nil
 	}
-	m, err := migrate.New(
-		"file://migrations",
-		config.DatabaseDSN)
+	m, err := migrate.New("file://migrations", dsn)
 	if err != nil {
 		logger.Error("Unable to migrate tables: ", err)
-		return nil
 	}
 	err = m.Up()
 	if err != nil {
 		logger.Error("Unable to migrate tables: ", err)
-		return nil
 	}
 	db := &DBStorage{dbpool}
 	return db
 }
 
-func (dbpool *DBStorage) StoreMetric(ctx context.Context, metric server.Metrics) error {
+func (dbpool *DBStorage) StoreMetric(ctx context.Context, metric Metrics) error {
 	now := time.Now()
 	_, err := dbpool.Exec(ctx, `
 			INSERT INTO metrics (id, type, delta, value, updated_at)
@@ -60,7 +51,7 @@ func (dbpool *DBStorage) StoreMetric(ctx context.Context, metric server.Metrics)
 	return nil
 }
 
-func (dbpool *DBStorage) StoreMetrics(ctx context.Context, metrics []server.Metrics) error {
+func (dbpool *DBStorage) StoreMetrics(ctx context.Context, metrics []Metrics) error {
 	tx, errTx := dbpool.Begin(ctx)
 	if errTx != nil {
 		return errTx
@@ -81,8 +72,8 @@ func (dbpool *DBStorage) StoreMetrics(ctx context.Context, metrics []server.Metr
 	return nil
 }
 
-func (dbpool *DBStorage) GetMetric(ctx context.Context, name string) (server.Metrics, error) {
-	var m server.Metrics
+func (dbpool *DBStorage) GetMetric(ctx context.Context, name string) (Metrics, error) {
+	var m Metrics
 	err := dbpool.QueryRow(ctx, "SELECT id, type, delta, value FROM metrics WHERE id = $1", name).
 		Scan(&m.ID, &m.MType, &m.Delta, &m.Value)
 	if err != nil {
@@ -92,20 +83,33 @@ func (dbpool *DBStorage) GetMetric(ctx context.Context, name string) (server.Met
 	return m, nil
 }
 
-func (dbpool *DBStorage) GetAllMetrics(ctx context.Context) ([]server.Metrics, error) {
-	var metrics []server.Metrics
+func (dbpool *DBStorage) GetAllMetrics(ctx context.Context) ([]Metrics, error) {
+	var metrics []Metrics
 	rows, err := dbpool.Query(ctx, "SELECT id, type, delta, value FROM metrics")
 	if err != nil {
-		return []server.Metrics{}, err
+		return []Metrics{}, err
 	}
 	defer rows.Close()
 	for rows.Next() {
-		var m server.Metrics
+		var m Metrics
 		err = rows.Scan(&m.ID, &m.MType, &m.Delta, &m.Value)
 		if err != nil {
-			return []server.Metrics{}, err
+			return []Metrics{}, err
 		}
 		metrics = append(metrics, m)
 	}
 	return metrics, nil
+}
+
+func (dbpool *DBStorage) Ping(ctx context.Context) error {
+	var one int
+	err := dbpool.QueryRow(ctx, "select 1").Scan(&one)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (dbpool *DBStorage) Close() {
+	dbpool.Close() //nolint:staticcheck // strange warning
 }

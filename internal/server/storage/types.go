@@ -2,13 +2,30 @@ package storage
 
 import (
 	"context"
-
-	"github.com/pisarevaa/metrics/internal/server"
 )
 
 type Storage interface {
-	GetMetric(ctx context.Context, name string) (metric server.Metrics, err error)
-	GetAllMetrics(ctx context.Context) (metric []server.Metrics, err error)
-	StoreMetrics(ctx context.Context, metrics []server.Metrics) (err error)
-	StoreMetric(ctx context.Context, metric server.Metrics) (err error)
+	GetMetric(ctx context.Context, name string) (metric Metrics, err error)
+	GetAllMetrics(ctx context.Context) (metric []Metrics, err error)
+	StoreMetrics(ctx context.Context, metrics []Metrics) (err error)
+	StoreMetric(ctx context.Context, metric Metrics) (err error)
+	Ping(ctx context.Context) (err error)
+	Close()
 }
+
+type Metrics struct {
+	ID    string   `json:"id"`              // имя метрики
+	MType string   `json:"type"`            // параметр, принимающий значение gauge или counter
+	Delta *int64   `json:"delta,omitempty"` // значение метрики в случае передачи counter
+	Value *float64 `json:"value,omitempty"` // значение метрики в случае передачи gauge
+}
+
+type QueryMetrics struct {
+	ID    string `json:"id"`
+	MType string `json:"type"`
+}
+
+const (
+	Gauge   = "gauge"
+	Counter = "counter"
+)

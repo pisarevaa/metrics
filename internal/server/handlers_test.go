@@ -16,6 +16,7 @@ import (
 
 	"github.com/pisarevaa/metrics/internal/server"
 	mock "github.com/pisarevaa/metrics/internal/server/mocks"
+	"github.com/pisarevaa/metrics/internal/server/storage"
 )
 
 type ServerTestSuite struct {
@@ -85,17 +86,8 @@ func testRequestWithGZIP(
 }
 
 func (suite *ServerTestSuite) TestServerUpdateAndGetMetrics() {
-	storage := server.NewMemStorageRepo()
-	ctrl := gomock.NewController(suite.T())
-	defer ctrl.Finish()
-
-	m := mock.NewMockMetricsModel(ctrl)
-
-	m.EXPECT().
-		IsExist().
-		Return(false).
-		MaxTimes(10)
-	ts := httptest.NewServer(server.MetricsRouter(suite.config, suite.logger, storage, m))
+	repo := storage.NewMemStorage()
+	ts := httptest.NewServer(server.MetricsRouter(suite.config, suite.logger, repo))
 	defer ts.Close()
 
 	type want struct {
@@ -210,17 +202,8 @@ func (suite *ServerTestSuite) TestServerUpdateAndGetMetrics() {
 }
 
 func (suite *ServerTestSuite) TestServerUpdateAndGetMetricsJSON() {
-	storage := server.NewMemStorageRepo()
-	ctrl := gomock.NewController(suite.T())
-	defer ctrl.Finish()
-
-	m := mock.NewMockMetricsModel(ctrl)
-
-	m.EXPECT().
-		IsExist().
-		Return(false).
-		MaxTimes(10)
-	ts := httptest.NewServer(server.MetricsRouter(suite.config, suite.logger, storage, m))
+	repo := storage.NewMemStorage()
+	ts := httptest.NewServer(server.MetricsRouter(suite.config, suite.logger, repo))
 	defer ts.Close()
 
 	type want struct {
@@ -240,7 +223,7 @@ func (suite *ServerTestSuite) TestServerUpdateAndGetMetricsJSON() {
 			want: want{
 				statusCode: 200,
 				json:       true,
-				response:   `{"id":"HeapAlloc","type":"gauge","delta":0,"value":1.25}`,
+				response:   `{"id":"HeapAlloc","type":"gauge","value":1.25}`,
 			},
 			url:    "/update/",
 			body:   `{"id": "HeapAlloc", "type": "gauge", "value": 1.25}`,
@@ -251,7 +234,7 @@ func (suite *ServerTestSuite) TestServerUpdateAndGetMetricsJSON() {
 			want: want{
 				statusCode: 200,
 				json:       true,
-				response:   `{"id":"PollCount","type":"counter","delta":4,"value":0}`,
+				response:   `{"id":"PollCount","type":"counter","delta":4}`,
 			},
 			url:    "/update/",
 			body:   `{"id": "PollCount", "type": "counter", "delta": 4}`,
@@ -338,18 +321,8 @@ func (suite *ServerTestSuite) TestServerUpdateAndGetMetricsJSON() {
 }
 
 func (suite *ServerTestSuite) TestServerUpdateAndGetMetricsWithGZIP() {
-	storage := server.NewMemStorageRepo()
-	ctrl := gomock.NewController(suite.T())
-	defer ctrl.Finish()
-
-	m := mock.NewMockMetricsModel(ctrl)
-
-	m.EXPECT().
-		IsExist().
-		Return(false).
-		MaxTimes(10)
-
-	ts := httptest.NewServer(server.MetricsRouter(suite.config, suite.logger, storage, m))
+	repo := storage.NewMemStorage()
+	ts := httptest.NewServer(server.MetricsRouter(suite.config, suite.logger, repo))
 	defer ts.Close()
 
 	type want struct {
@@ -371,7 +344,7 @@ func (suite *ServerTestSuite) TestServerUpdateAndGetMetricsWithGZIP() {
 			want: want{
 				statusCode: 200,
 				json:       true,
-				response:   `{"id":"HeapAlloc","type":"gauge","delta":0,"value":1.25}`,
+				response:   `{"id":"HeapAlloc","type":"gauge","value":1.25}`,
 			},
 			url:             "/update/",
 			body:            `{"id": "HeapAlloc", "type": "gauge", "value": 1.25}`,
@@ -384,7 +357,7 @@ func (suite *ServerTestSuite) TestServerUpdateAndGetMetricsWithGZIP() {
 			want: want{
 				statusCode: 200,
 				json:       true,
-				response:   `{"id":"HeapAlloc","type":"gauge","delta":0,"value":1.25}`,
+				response:   `{"id":"HeapAlloc","type":"gauge","value":1.25}`,
 			},
 			url:             "/update/",
 			body:            `{"id": "HeapAlloc", "type": "gauge", "value": 1.25}`,
@@ -397,7 +370,7 @@ func (suite *ServerTestSuite) TestServerUpdateAndGetMetricsWithGZIP() {
 			want: want{
 				statusCode: 200,
 				json:       true,
-				response:   `{"id":"HeapAlloc","type":"gauge","delta":0,"value":1.25}`,
+				response:   `{"id":"HeapAlloc","type":"gauge","value":1.25}`,
 			},
 			url:             "/update/",
 			body:            `{"id": "HeapAlloc", "type": "gauge", "value": 1.25}`,
@@ -433,24 +406,16 @@ func (suite *ServerTestSuite) TestServerUpdateAndGetMetricsWithGZIP() {
 }
 
 func (suite *ServerTestSuite) TestPing() {
-	storage := server.NewMemStorageRepo()
 	ctrl := gomock.NewController(suite.T())
 	defer ctrl.Finish()
 
-	m := mock.NewMockMetricsModel(ctrl)
+	m := mock.NewMockStorage(ctrl)
 
 	m.EXPECT().
 		Ping(gomock.Any()).
 		Return(nil)
-	m.EXPECT().
-		IsExist().
-		Return(true).
-		MaxTimes(2)
-	m.EXPECT().
-		RestoreMetricsFromDB(gomock.Any()).
-		Return(nil)
 
-	ts := httptest.NewServer(server.MetricsRouter(suite.config, suite.logger, storage, m))
+	ts := httptest.NewServer(server.MetricsRouter(suite.config, suite.logger, m))
 	defer ts.Close()
 
 	resp, _ := testRequest(suite, ts, "GET", "/ping", "")
@@ -459,24 +424,16 @@ func (suite *ServerTestSuite) TestPing() {
 }
 
 func (suite *ServerTestSuite) TestServerUpdateAndGetMetricsJSONBatch() {
-	storage := server.NewMemStorageRepo()
 	ctrl := gomock.NewController(suite.T())
 	defer ctrl.Finish()
 
-	m := mock.NewMockMetricsModel(ctrl)
+	m := mock.NewMockStorage(ctrl)
 
 	m.EXPECT().
-		InsertRowsIntoDB(gomock.Any(), gomock.Any()).
-		Return(nil)
-	m.EXPECT().
-		IsExist().
-		Return(true).
-		MaxTimes(2)
-	m.EXPECT().
-		RestoreMetricsFromDB(gomock.Any()).
+		StoreMetrics(gomock.Any(), gomock.Any()).
 		Return(nil)
 
-	ts := httptest.NewServer(server.MetricsRouter(suite.config, suite.logger, storage, m))
+	ts := httptest.NewServer(server.MetricsRouter(suite.config, suite.logger, m))
 	defer ts.Close()
 
 	resp, _ := testRequest(suite, ts, "POST", "/updates/", `[{"id": "HeapAlloc", "type": "gauge", "value": 1.25}]`)
