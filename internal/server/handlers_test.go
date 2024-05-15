@@ -380,6 +380,19 @@ func (suite *ServerTestSuite) TestServerUpdateAndGetMetricsWithGZIP() {
 			contentEncoding: "",
 			acceptEncoding:  "gzip",
 		},
+		{
+			name: "add counter metric with gzip body and return",
+			want: want{
+				statusCode: 200,
+				json:       true,
+				response:   `{"id":"HeapAlloc","type":"counter","delta":20}`,
+			},
+			url:             "/update/",
+			body:            `{"id": "HeapAlloc", "type": "counter", "delta": 10}`,
+			method:          "POST",
+			contentEncoding: "gzip",
+			acceptEncoding:  "gzip",
+		},
 	}
 	for _, tt := range tests {
 		resp, body := testRequestWithGZIP(suite, ts, tt.method, tt.url, tt.body, tt.contentEncoding, tt.acceptEncoding)

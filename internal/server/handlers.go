@@ -100,26 +100,31 @@ func (s *Handler) StoreMetricsJSON(w http.ResponseWriter, r *http.Request) {
 	var buf bytes.Buffer
 	_, err := buf.ReadFrom(r.Body)
 	if err != nil {
+		s.Logger.Error(err)
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 	if err = json.Unmarshal(buf.Bytes(), &metric); err != nil {
+		s.Logger.Error(err)
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 	s.Logger.Info("metric ", metric)
 
 	if !(metric.MType == storage.Gauge || metric.MType == storage.Counter) {
+		s.Logger.Error("Only 'gauge' and 'counter' values are allowed!")
 		http.Error(w, "Only 'gauge' and 'counter' values are allowed!", http.StatusBadRequest)
 		return
 	}
 	if metric.ID == "" {
+		s.Logger.Error("Empty metric id is not allowed!")
 		http.Error(w, "Empty metric id is not allowed!", http.StatusNotFound)
 		return
 	}
 
 	err = s.Storage.StoreMetric(r.Context(), metric)
 	if err != nil {
+		s.Logger.Error("Error to store metric ", err)
 		http.Error(w, "Error to store metric", http.StatusBadRequest)
 		return
 	}
@@ -139,12 +144,14 @@ func (s *Handler) StoreMetricsJSON(w http.ResponseWriter, r *http.Request) {
 
 	resp, err := json.Marshal(metric)
 	if err != nil {
+		s.Logger.Error(err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	_, err = w.Write(resp)
 	if err != nil {
+		s.Logger.Error(err)
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
