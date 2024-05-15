@@ -107,6 +107,7 @@ func (s *Handler) StoreMetricsJSON(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+	s.Logger.Info("metric ", metric)
 
 	if !(metric.MType == storage.Gauge || metric.MType == storage.Counter) {
 		http.Error(w, "Only 'gauge' and 'counter' values are allowed!", http.StatusBadRequest)
