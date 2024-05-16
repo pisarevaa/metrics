@@ -7,7 +7,7 @@ import (
 	"github.com/pisarevaa/metrics/internal/server/storage"
 )
 
-func SaveToDosk(metrics []storage.Metrics, filename string) error {
+func SaveToDisk(metrics []storage.Metrics, filename string) error {
 	if filename == "" {
 		return nil
 	}

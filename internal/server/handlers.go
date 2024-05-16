@@ -135,7 +135,7 @@ func (s *Handler) StoreMetricsJSON(w http.ResponseWriter, r *http.Request) { //n
 			http.Error(w, "Error to get all metrics", http.StatusBadRequest)
 			return
 		}
-		err = SaveToDosk(metrics, s.Config.FileStoragePath)
+		err = SaveToDisk(metrics, s.Config.FileStoragePath)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -149,13 +149,7 @@ func (s *Handler) StoreMetricsJSON(w http.ResponseWriter, r *http.Request) { //n
 		return
 	}
 
-	var resp []byte
-	if metric.MType == storage.Gauge {
-		resp, err = json.Marshal(storage.GaugeMetrics{ID: metric.ID, MType: metric.MType, Value: metricStored.Value})
-	}
-	if metric.MType == storage.Counter {
-		resp, err = json.Marshal(storage.CounterMetrics{ID: metric.ID, MType: metric.MType, Delta: metricStored.Delta})
-	}
+	resp, err := metricStored.ToJSON()
 	if err != nil {
 		s.Logger.Error(err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -208,7 +202,7 @@ func (s *Handler) StoreMetricsJSONBatches(w http.ResponseWriter, r *http.Request
 	}
 
 	if s.Config.StoreInterval == 0 {
-		err = SaveToDosk(metrics, s.Config.FileStoragePath)
+		err = SaveToDisk(metrics, s.Config.FileStoragePath)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -294,13 +288,7 @@ func (s *Handler) GetMetricJSON(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var resp []byte
-	if query.MType == storage.Gauge {
-		resp, err = json.Marshal(storage.GaugeMetrics{ID: metric.ID, MType: metric.MType, Value: metric.Value})
-	}
-	if query.MType == storage.Counter {
-		resp, err = json.Marshal(storage.CounterMetrics{ID: metric.ID, MType: metric.MType, Delta: metric.Delta})
-	}
+	resp, err := metric.ToJSON()
 	if err != nil {
 		s.Logger.Error(err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -352,7 +340,7 @@ func (s *Handler) RunTaskSaveToDisk() {
 				s.Logger.Error("error to save metrics to disk:", err)
 				stop <- true
 			}
-			err = SaveToDosk(metrics, s.Config.FileStoragePath)
+			err = SaveToDisk(metrics, s.Config.FileStoragePath)
 			if err != nil {
 				s.Logger.Error("error to save metrics to disk:", err)
 				stop <- true

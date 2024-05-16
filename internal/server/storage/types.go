@@ -2,6 +2,7 @@ package storage
 
 import (
 	"context"
+	"encoding/json"
 )
 
 type Storage interface {
@@ -41,3 +42,15 @@ const (
 	Gauge   = "gauge"
 	Counter = "counter"
 )
+
+func (m *Metrics) ToJSON() ([]byte, error) {
+	var resp []byte
+	var err error
+	if m.MType == Gauge {
+		resp, err = json.Marshal(GaugeMetrics{ID: m.ID, MType: m.MType, Value: m.Value})
+	}
+	if m.MType == Counter {
+		resp, err = json.Marshal(CounterMetrics{ID: m.ID, MType: m.MType, Delta: m.Delta})
+	}
+	return resp, err
+}
