@@ -7,18 +7,22 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/big"
-	"reflect"
 	"runtime"
 	"sync"
 	"time"
 )
 
 type Metrics struct {
-	ID    string   `json:"id"`              // имя метрики
-	MType string   `json:"type"`            // параметр, принимающий значение gauge или counter
-	Delta *int64   `json:"delta,omitempty"` // значение метрики в случае передачи counter
-	Value *float64 `json:"value,omitempty"` // значение метрики в случае передачи gauge
+	ID    string  `json:"id"`    // имя метрики
+	MType string  `json:"type"`  // параметр, принимающий значение gauge или counter
+	Delta int64   `json:"delta"` // значение метрики в случае передачи counter
+	Value float64 `json:"value"` // значение метрики в случае передачи gauge
 }
+
+const (
+	gauge   = "gauge"
+	counter = "counter"
+)
 
 func randomInt() (int64, error) {
 	const maxInt = 1000000
@@ -30,56 +34,39 @@ func randomInt() (int64, error) {
 	return n, nil
 }
 
-func (s *Service) updateMemStats() error {
+func (s *Service) updateMemStats() {
 	var memStats runtime.MemStats
 	runtime.ReadMemStats(&memStats)
-
-	var gaugeMetrics = [...]string{
-		"Alloc",
-		"BuckHashSys",
-		"Frees",
-		"GCCPUFraction",
-		"GCSys",
-		"HeapAlloc",
-		"HeapIdle",
-		"HeapInuse",
-		"HeapObjects",
-		"HeapReleased",
-		"HeapSys",
-		"LastGC",
-		"Lookups",
-		"MCacheInuse",
-		"MCacheSys",
-		"MSpanInuse",
-		"MSpanSys",
-		"Mallocs",
-		"NextGC",
-		"NumForcedGC",
-		"NumGC",
-		"OtherSys",
-		"PauseTotalNs",
-		"StackInuse",
-		"StackSys",
-		"Sys",
-		"TotalAlloc",
+	var gaugeMetrics = map[string]float64{
+		"Alloc":         float64(memStats.Alloc),
+		"BuckHashSys":   float64(memStats.BuckHashSys),
+		"Frees":         float64(memStats.Frees),
+		"GCCPUFraction": float64(memStats.GCCPUFraction),
+		"GCSys":         float64(memStats.GCSys),
+		"HeapAlloc":     float64(memStats.HeapAlloc),
+		"HeapIdle":      float64(memStats.HeapIdle),
+		"HeapInuse":     float64(memStats.HeapInuse),
+		"HeapObjects":   float64(memStats.HeapObjects),
+		"HeapReleased":  float64(memStats.HeapReleased),
+		"HeapSys":       float64(memStats.HeapSys),
+		"LastGC":        float64(memStats.LastGC),
+		"Lookups":       float64(memStats.Lookups),
+		"MCacheInuse":   float64(memStats.MCacheInuse),
+		"MCacheSys":     float64(memStats.MCacheSys),
+		"MSpanInuse":    float64(memStats.MSpanInuse),
+		"MSpanSys":      float64(memStats.MSpanSys),
+		"Mallocs":       float64(memStats.Mallocs),
+		"NextGC":        float64(memStats.NextGC),
+		"NumForcedGC":   float64(memStats.NumForcedGC),
+		"NumGC":         float64(memStats.NumGC),
+		"OtherSys":      float64(memStats.OtherSys),
+		"PauseTotalNs":  float64(memStats.PauseTotalNs),
+		"StackInuse":    float64(memStats.StackInuse),
+		"StackSys":      float64(memStats.StackSys),
+		"Sys":           float64(memStats.Sys),
+		"TotalAlloc":    float64(memStats.TotalAlloc),
 	}
-
-	for _, v := range gaugeMetrics {
-		value := reflect.ValueOf(memStats).FieldByName(v)
-		var floatValue float64
-		switch value.Kind() {
-		case reflect.Uint64:
-			floatValue = float64(value.Uint())
-		case reflect.Uint32:
-			floatValue = float64(value.Uint())
-		case reflect.Float64:
-			floatValue = value.Float()
-		default:
-			return fmt.Errorf("not supported type: %v", value.Kind())
-		}
-		s.Storage.Gauge[v] = floatValue
-	}
-	return nil
+	s.Storage.StoreGauge(gaugeMetrics)
 }
 
 func (s *Service) updateRandomValue() error {
@@ -91,13 +78,8 @@ func (s *Service) updateRandomValue() error {
 	if err2 != nil {
 		return err2
 	}
-	randomFloat := float64(n1 / n2)
-	s.Storage.Gauge["RandomValue"] = randomFloat
+	s.Storage.StoreGauge(map[string]float64{"RandomValue": float64(n1 / n2)})
 	return nil
-}
-
-func (s *Service) updatePollCount() {
-	s.Storage.Counter["PollCount"]++
 }
 
 func (s *Service) RunUpdateMetrics(wg *sync.WaitGroup) {
@@ -121,15 +103,12 @@ func (s *Service) RunUpdateMetrics(wg *sync.WaitGroup) {
 
 func (s *Service) UpdateMetrics() error {
 	s.Logger.Info("UpdateMetrics")
-	updateMemStatsError := s.updateMemStats()
-	if updateMemStatsError != nil {
-		return updateMemStatsError
-	}
+	s.updateMemStats()
 	updateRandomValueError := s.updateRandomValue()
 	if updateRandomValueError != nil {
 		return updateRandomValueError
 	}
-	s.updatePollCount()
+	s.Storage.StoreCounter()
 	return nil
 }
 
@@ -140,26 +119,26 @@ func (s *Service) RunSendMetrics(wg *sync.WaitGroup) {
 	}
 }
 
-func (s *Service) makeHTTPRequest(payload Metrics) {
-	requestURL := fmt.Sprintf("http://%v/update/", s.Config.Host)
+func (s *Service) makeHTTPRequest(metrics []Metrics) {
+	requestURL := fmt.Sprintf("http://%v/updates/", s.Config.Host)
 	buf := bytes.NewBuffer(nil)
 	zb := gzip.NewWriter(buf)
-	payloadString, errJSON := json.Marshal(payload)
-	if errJSON != nil {
-		s.Logger.Error(errJSON)
+	payloadString, err := json.Marshal(metrics)
+	if err != nil {
+		s.Logger.Error(err)
 		return
 	}
-	_, errGzip := zb.Write(payloadString)
-	if errGzip != nil {
-		s.Logger.Error(errGzip)
+	_, err = zb.Write(payloadString)
+	if err != nil {
+		s.Logger.Error(err)
 		return
 	}
-	errZb := zb.Close()
-	if errZb != nil {
-		s.Logger.Error(errZb)
+	err = zb.Close()
+	if err != nil {
+		s.Logger.Error(err)
 		return
 	}
-	_, err := s.Client.R().
+	_, err = s.Client.R().
 		SetHeader("Content-Type", "application/json").
 		SetHeader("Content-Encoding", "gzip").
 		SetBody(buf).
@@ -170,22 +149,8 @@ func (s *Service) makeHTTPRequest(payload Metrics) {
 }
 
 func (s *Service) SendMetrics() {
-	for metric, value := range s.Storage.Gauge {
-		payload := Metrics{
-			ID:    metric,
-			MType: "gauge",
-			Value: &value, // #nosec G601 - проблема ичезнет в go 1.22
-		}
-		s.makeHTTPRequest(payload)
-	}
-	for metric, value := range s.Storage.Counter {
-		payload := Metrics{
-			ID:    metric,
-			MType: "counter",
-			Delta: &value, // #nosec G601 - проблема ичезнет в go 1.22
-		}
-		s.makeHTTPRequest(payload)
-	}
+	metrics := s.Storage.GetMetrics()
+	s.makeHTTPRequest(metrics)
 	s.Logger.Info("Send Gauge", s.Storage.Gauge)
 	s.Logger.Info("Send Counter", s.Storage.Counter)
 }

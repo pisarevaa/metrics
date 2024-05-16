@@ -3,8 +3,6 @@ package main
 import (
 	"sync"
 
-	"github.com/go-resty/resty/v2"
-
 	"github.com/pisarevaa/metrics/internal/agent"
 )
 
@@ -12,7 +10,7 @@ const processes = 2
 
 func main() {
 	config := agent.GetConfig()
-	client := resty.New()
+	client := agent.NewClient()
 	logger := agent.GetLogger()
 	storage := agent.NewMemStorageRepo()
 	service := agent.NewService(client, storage, config, logger)

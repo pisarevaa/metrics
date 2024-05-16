@@ -12,7 +12,11 @@ import (
 
 	"github.com/stretchr/testify/suite"
 
+	"github.com/golang/mock/gomock"
+
 	"github.com/pisarevaa/metrics/internal/server"
+	mock "github.com/pisarevaa/metrics/internal/server/mocks"
+	"github.com/pisarevaa/metrics/internal/server/storage"
 )
 
 type ServerTestSuite struct {
@@ -82,8 +86,8 @@ func testRequestWithGZIP(
 }
 
 func (suite *ServerTestSuite) TestServerUpdateAndGetMetrics() {
-	storage := server.NewMemStorageRepo()
-	ts := httptest.NewServer(server.MetricsRouter(suite.config, suite.logger, storage))
+	repo := storage.NewMemStorage()
+	ts := httptest.NewServer(server.MetricsRouter(suite.config, suite.logger, repo))
 	defer ts.Close()
 
 	type want struct {
@@ -198,8 +202,8 @@ func (suite *ServerTestSuite) TestServerUpdateAndGetMetrics() {
 }
 
 func (suite *ServerTestSuite) TestServerUpdateAndGetMetricsJSON() {
-	storage := server.NewMemStorageRepo()
-	ts := httptest.NewServer(server.MetricsRouter(suite.config, suite.logger, storage))
+	repo := storage.NewMemStorage()
+	ts := httptest.NewServer(server.MetricsRouter(suite.config, suite.logger, repo))
 	defer ts.Close()
 
 	type want struct {
@@ -219,7 +223,7 @@ func (suite *ServerTestSuite) TestServerUpdateAndGetMetricsJSON() {
 			want: want{
 				statusCode: 200,
 				json:       true,
-				response:   `{"id":"HeapAlloc","type":"gauge","delta":0,"value":1.25}`,
+				response:   `{"id":"HeapAlloc","type":"gauge","value":1.25}`,
 			},
 			url:    "/update/",
 			body:   `{"id": "HeapAlloc", "type": "gauge", "value": 1.25}`,
@@ -230,7 +234,7 @@ func (suite *ServerTestSuite) TestServerUpdateAndGetMetricsJSON() {
 			want: want{
 				statusCode: 200,
 				json:       true,
-				response:   `{"id":"PollCount","type":"counter","delta":4,"value":0}`,
+				response:   `{"id":"PollCount","type":"counter","delta":4}`,
 			},
 			url:    "/update/",
 			body:   `{"id": "PollCount", "type": "counter", "delta": 4}`,
@@ -245,17 +249,6 @@ func (suite *ServerTestSuite) TestServerUpdateAndGetMetricsJSON() {
 			},
 			url:    "/update/",
 			body:   `{"id":"HeapAlloc","type":"test","value":1.25,"delta":0}`,
-			method: "POST",
-		},
-		{
-			name: "add empty metric value",
-			want: want{
-				statusCode: 400,
-				json:       true,
-				response:   "",
-			},
-			url:    "/update/",
-			body:   `{"id": "HeapAlloc", "type": "counter"}`,
 			method: "POST",
 		},
 		{
@@ -317,8 +310,8 @@ func (suite *ServerTestSuite) TestServerUpdateAndGetMetricsJSON() {
 }
 
 func (suite *ServerTestSuite) TestServerUpdateAndGetMetricsWithGZIP() {
-	storage := server.NewMemStorageRepo()
-	ts := httptest.NewServer(server.MetricsRouter(suite.config, suite.logger, storage))
+	repo := storage.NewMemStorage()
+	ts := httptest.NewServer(server.MetricsRouter(suite.config, suite.logger, repo))
 	defer ts.Close()
 
 	type want struct {
@@ -340,7 +333,7 @@ func (suite *ServerTestSuite) TestServerUpdateAndGetMetricsWithGZIP() {
 			want: want{
 				statusCode: 200,
 				json:       true,
-				response:   `{"id":"HeapAlloc","type":"gauge","delta":0,"value":1.25}`,
+				response:   `{"id":"HeapAlloc","type":"gauge","value":1.25}`,
 			},
 			url:             "/update/",
 			body:            `{"id": "HeapAlloc", "type": "gauge", "value": 1.25}`,
@@ -353,7 +346,7 @@ func (suite *ServerTestSuite) TestServerUpdateAndGetMetricsWithGZIP() {
 			want: want{
 				statusCode: 200,
 				json:       true,
-				response:   `{"id":"HeapAlloc","type":"gauge","delta":0,"value":1.25}`,
+				response:   `{"id":"HeapAlloc","type":"gauge","value":1.25}`,
 			},
 			url:             "/update/",
 			body:            `{"id": "HeapAlloc", "type": "gauge", "value": 1.25}`,
@@ -366,7 +359,7 @@ func (suite *ServerTestSuite) TestServerUpdateAndGetMetricsWithGZIP() {
 			want: want{
 				statusCode: 200,
 				json:       true,
-				response:   `{"id":"HeapAlloc","type":"gauge","delta":0,"value":1.25}`,
+				response:   `{"id":"HeapAlloc","type":"gauge","value":1.25}`,
 			},
 			url:             "/update/",
 			body:            `{"id": "HeapAlloc", "type": "gauge", "value": 1.25}`,
@@ -387,6 +380,32 @@ func (suite *ServerTestSuite) TestServerUpdateAndGetMetricsWithGZIP() {
 			contentEncoding: "",
 			acceptEncoding:  "gzip",
 		},
+		{
+			name: "add counter metric with gzip body and return",
+			want: want{
+				statusCode: 200,
+				json:       true,
+				response:   `{"id":"HeapAlloc","type":"counter","delta":10}`,
+			},
+			url:             "/update/",
+			body:            `{"id": "HeapAlloc", "type": "counter", "delta": 10}`,
+			method:          "POST",
+			contentEncoding: "gzip",
+			acceptEncoding:  "gzip",
+		},
+		{
+			name: "add counter metric with gzip body and return",
+			want: want{
+				statusCode: 200,
+				json:       true,
+				response:   `{"id":"HeapAlloc","type":"counter","delta":20}`,
+			},
+			url:             "/update/",
+			body:            `{"id": "HeapAlloc", "type": "counter", "delta": 10}`,
+			method:          "POST",
+			contentEncoding: "gzip",
+			acceptEncoding:  "gzip",
+		},
 	}
 	for _, tt := range tests {
 		resp, body := testRequestWithGZIP(suite, ts, tt.method, tt.url, tt.body, tt.contentEncoding, tt.acceptEncoding)
@@ -399,4 +418,40 @@ func (suite *ServerTestSuite) TestServerUpdateAndGetMetricsWithGZIP() {
 			}
 		}
 	}
+}
+
+func (suite *ServerTestSuite) TestPing() {
+	ctrl := gomock.NewController(suite.T())
+	defer ctrl.Finish()
+
+	m := mock.NewMockStorage(ctrl)
+
+	m.EXPECT().
+		Ping(gomock.Any()).
+		Return(nil)
+
+	ts := httptest.NewServer(server.MetricsRouter(suite.config, suite.logger, m))
+	defer ts.Close()
+
+	resp, _ := testRequest(suite, ts, "GET", "/ping", "")
+	defer resp.Body.Close()
+	suite.Require().Equal(200, resp.StatusCode)
+}
+
+func (suite *ServerTestSuite) TestServerUpdateAndGetMetricsJSONBatch() {
+	ctrl := gomock.NewController(suite.T())
+	defer ctrl.Finish()
+
+	m := mock.NewMockStorage(ctrl)
+
+	m.EXPECT().
+		StoreMetrics(gomock.Any(), gomock.Any()).
+		Return(nil)
+
+	ts := httptest.NewServer(server.MetricsRouter(suite.config, suite.logger, m))
+	defer ts.Close()
+
+	resp, _ := testRequest(suite, ts, "POST", "/updates/", `[{"id": "HeapAlloc", "type": "gauge", "value": 1.25}]`)
+	defer resp.Body.Close()
+	suite.Require().Equal(200, resp.StatusCode)
 }
