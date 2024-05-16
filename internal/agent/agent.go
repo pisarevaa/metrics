@@ -138,11 +138,19 @@ func (s *Service) makeHTTPRequest(metrics []Metrics) {
 		s.Logger.Error(err)
 		return
 	}
-	_, err = s.Client.R().
+	r := s.Client.R().
 		SetHeader("Content-Type", "application/json").
 		SetHeader("Content-Encoding", "gzip").
-		SetBody(buf).
-		Post(requestURL)
+		SetBody(buf)
+	if s.Config.Key != "" {
+		hash, errHash := GetBodyHash(payloadString, s.Config.Key)
+		if errHash != nil {
+			s.Logger.Error(errHash)
+			return
+		}
+		r.SetHeader("HashSHA256", hash)
+	}
+	_, err = r.Post(requestURL)
 	if err != nil {
 		s.Logger.Error("error making http request: ", err)
 	}

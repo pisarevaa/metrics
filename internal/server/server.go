@@ -27,6 +27,10 @@ func MetricsRouter(
 	r := chi.NewRouter()
 	r.Use(srv.HTTPLoggingMiddleware)
 	r.Use(srv.GzipMiddleware)
+
+	if config.Key != "" {
+		r.Use(srv.HashCheckMiddleware)
+	}
 	r.Get("/ping", srv.Ping)
 	r.Post("/update/{metricType}/{metricName}/{metricValue}", srv.StoreMetrics)
 	r.Post("/update/", srv.StoreMetricsJSON)

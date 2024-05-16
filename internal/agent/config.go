@@ -11,6 +11,7 @@ type Config struct {
 	Host           string `env:"ADDRESS"`
 	PollInterval   int    `env:"REPORT_INTERVAL"`
 	ReportInterval int    `env:"POLL_INTERVAL"`
+	Key            string `env:"KEY"`
 }
 
 func GetConfig() Config {
@@ -19,6 +20,7 @@ func GetConfig() Config {
 	flag.StringVar(&config.Host, "a", "localhost:8080", "server host")
 	flag.IntVar(&config.PollInterval, "p", 2, "frequency of sending metrics to the server")
 	flag.IntVar(&config.ReportInterval, "r", 10, "frequency of polling metrics from the runtime package")
+	flag.StringVar(&config.Key, "k", "", "Key for hashing")
 	flag.Parse()
 	if len(flag.Args()) > 0 {
 		log.Fatal("used not declared arguments")
@@ -37,6 +39,9 @@ func GetConfig() Config {
 	}
 	if envConfig.ReportInterval != 0 {
 		config.ReportInterval = envConfig.ReportInterval
+	}
+	if envConfig.Key != "" {
+		config.Key = envConfig.Key
 	}
 
 	return config
