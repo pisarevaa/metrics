@@ -37,11 +37,14 @@ func (s *Handler) HashCheckMiddleware(h http.Handler) http.Handler {
 			http.Error(w, errHash.Error(), http.StatusBadRequest)
 			return
 		}
-		if hashInHeader != hash {
-			s.Logger.Error("Hash mismatch:", hashInHeader, "!=", hash)
-			http.Error(w, "Hash mismatch", http.StatusBadRequest)
-			return
+		if hashInHeader != "none" && hashInHeader != "" {
+			if hashInHeader != hash {
+				s.Logger.Error("Hash mismatch:", hashInHeader, "!=", hash)
+				http.Error(w, "Hash mismatch", http.StatusBadRequest)
+				return
+			}
 		}
+
 		r.Body = io.NopCloser(bytes.NewReader(payload))
 		h.ServeHTTP(w, r)
 	})
