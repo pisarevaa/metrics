@@ -148,7 +148,8 @@ func (s *Service) makeHTTPRequest(metrics []Metrics) {
 			s.Logger.Error(errHash)
 			return
 		}
-		r.SetHeader("HashSHA256", hash)
+		s.Logger.Info("Hash", hash)
+		r.SetHeader("Hash", hash)
 	}
 	_, err = r.Post(requestURL)
 	if err != nil {

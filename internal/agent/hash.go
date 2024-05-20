@@ -2,6 +2,7 @@ package agent
 
 import (
 	"crypto/sha256"
+	"encoding/base64"
 )
 
 func GetBodyHash(payload []byte, key string) (string, error) {
@@ -11,6 +12,6 @@ func GetBodyHash(payload []byte, key string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	dst := h.Sum(nil)
-	return string(dst), nil
+	sha := base64.URLEncoding.EncodeToString(h.Sum(nil))
+	return sha, nil
 }
