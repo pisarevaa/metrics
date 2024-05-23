@@ -3,6 +3,7 @@ package agent
 import (
 	"bytes"
 	"compress/gzip"
+	"context"
 	"crypto/rand"
 	"encoding/json"
 	"fmt"
@@ -73,6 +74,7 @@ func (s *Service) updateMemStats() {
 }
 
 func (s *Service) updateGopsutilStats() error {
+	s.Logger.Info("UpdateGopsutilMetrics")
 	v, err := mem.VirtualMemory()
 	if err != nil {
 		return err
@@ -103,26 +105,31 @@ func (s *Service) updateRandomValue() error {
 	return nil
 }
 
-func (s *Service) RunUpdateGopsutilMetrics(wg *sync.WaitGroup) {
+func (s *Service) RunUpdateGopsutilMetrics(ctx context.Context, wg *sync.WaitGroup) {
 	defer wg.Done()
 	ticker := time.NewTicker(time.Duration(s.Config.PollInterval) * time.Second)
 	defer ticker.Stop()
 	stop := make(chan bool, 1)
 	for {
 		select {
+		case <-ctx.Done():
+			stop <- true
+			s.Logger.Error("ctx.Done -> exit RunUpdateRuntimeMetrics")
+			return
+		case <-stop:
+			s.Logger.Error("stop -> exit RunUpdateRuntimeMetrics")
+			return
 		case <-ticker.C:
 			err := s.updateGopsutilStats()
 			if err != nil {
 				s.Logger.Error("error to update metrics:", err)
 				stop <- true
 			}
-		case <-stop:
-			return
 		}
 	}
 }
 
-func (s *Service) RunUpdateRuntimeMetrics(wg *sync.WaitGroup) {
+func (s *Service) RunUpdateRuntimeMetrics(ctx context.Context, wg *sync.WaitGroup) {
 	defer wg.Done()
 	ticker := time.NewTicker(time.Duration(s.Config.PollInterval) * time.Second)
 	defer ticker.Stop()
@@ -135,7 +142,12 @@ func (s *Service) RunUpdateRuntimeMetrics(wg *sync.WaitGroup) {
 				s.Logger.Error("error to update metrics:", err)
 				stop <- true
 			}
+		case <-ctx.Done():
+			stop <- true
+			s.Logger.Error("ctx.Done -> exit RunUpdateRuntimeMetrics")
+			return
 		case <-stop:
+			s.Logger.Error("stop -> exit RunUpdateRuntimeMetrics")
 			return
 		}
 	}
@@ -163,10 +175,23 @@ func (s *Service) UpdateGopsutilMetrics() error {
 	return nil
 }
 
-func (s *Service) RunSendMetrics(wg *sync.WaitGroup) {
+func (s *Service) RunSendMetrics(ctx context.Context, wg *sync.WaitGroup) {
 	defer wg.Done()
-	for range time.Tick(time.Duration(s.Config.ReportInterval) * time.Second) {
-		s.SendMetrics()
+	ticker := time.NewTicker(time.Duration(s.Config.ReportInterval) * time.Second)
+	defer ticker.Stop()
+	stop := make(chan bool, 1)
+	for {
+		select {
+		case <-ctx.Done():
+			stop <- true
+			s.Logger.Error("ctx.Done -> exit RunSendMetric")
+			return
+		case <-stop:
+			s.Logger.Error("stop -> exit RunSendMetric")
+			return
+		case <-ticker.C:
+			s.SendMetrics()
+		}
 	}
 }
 
