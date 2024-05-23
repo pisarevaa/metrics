@@ -234,6 +234,8 @@ func (s *Service) makeHTTPRequest(metrics []Metrics) {
 }
 
 func (s *Service) SendMetrics() {
+	s.Semaphore.Acquire()
+	defer s.Semaphore.Release()
 	metrics := s.Storage.GetMetrics()
 	s.makeHTTPRequest(metrics)
 	s.Logger.Info("Send Gauge", s.Storage.Gauge)

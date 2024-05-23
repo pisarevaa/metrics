@@ -6,10 +6,11 @@ import (
 )
 
 type Service struct {
-	Client  *resty.Client
-	Storage *MemStorage
-	Config  Config
-	Logger  *zap.SugaredLogger
+	Client    *resty.Client
+	Storage   *MemStorage
+	Config    Config
+	Logger    *zap.SugaredLogger
+	Semaphore *Semaphore
 }
 
 func NewService(
@@ -17,11 +18,13 @@ func NewService(
 	storage *MemStorage,
 	config Config,
 	logger *zap.SugaredLogger,
+	semaphore *Semaphore,
 ) *Service {
 	return &Service{
-		Client:  client,
-		Storage: storage,
-		Config:  config,
-		Logger:  logger,
+		Client:    client,
+		Storage:   storage,
+		Config:    config,
+		Logger:    logger,
+		Semaphore: semaphore,
 	}
 }

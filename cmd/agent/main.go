@@ -30,8 +30,8 @@ func main() {
 		cancel()
 	}()
 
-	// semaphore := agent.NewSemaphore(config.RateLimit)
-	service := agent.NewService(client, storage, config, logger)
+	semaphore := agent.NewSemaphore(config.RateLimit)
+	service := agent.NewService(client, storage, config, logger, semaphore)
 	var wg sync.WaitGroup
 	wg.Add(processes)
 	logger.Info("Client is running...")

@@ -12,20 +12,22 @@ import (
 
 type AgentTestSuite struct {
 	suite.Suite
-	client *resty.Client
-	config agent.Config
-	logger *zap.SugaredLogger
+	client    *resty.Client
+	config    agent.Config
+	logger    *zap.SugaredLogger
+	semaphore *agent.Semaphore
 }
 
 func (suite *AgentTestSuite) SetupSuite() {
 	suite.config = agent.GetConfig()
 	suite.logger = agent.GetLogger()
 	suite.client = resty.New()
+	suite.semaphore = agent.NewSemaphore(suite.config.RateLimit)
 }
 
 func (suite *AgentTestSuite) TestUpdateRuntimeMetrics() {
 	storage := agent.NewMemStorageRepo()
-	service := agent.NewService(suite.client, storage, suite.config, suite.logger)
+	service := agent.NewService(suite.client, storage, suite.config, suite.logger, suite.semaphore)
 	errFirst := service.UpdateRuntimeMetrics()
 	suite.Require().NoError(errFirst)
 	allocFirst, allocFirstErr := service.Storage.Get("gauge", "Alloc")
@@ -50,7 +52,7 @@ func (suite *AgentTestSuite) TestUpdateRuntimeMetrics() {
 
 func (suite *AgentTestSuite) TestSendMetrics() {
 	storage := agent.NewMemStorageRepo()
-	service := agent.NewService(suite.client, storage, suite.config, suite.logger)
+	service := agent.NewService(suite.client, storage, suite.config, suite.logger, suite.semaphore)
 	service.SendMetrics()
 	err := service.UpdateRuntimeMetrics()
 	suite.Require().NoError(err)
