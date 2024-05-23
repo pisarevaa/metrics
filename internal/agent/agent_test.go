@@ -23,10 +23,10 @@ func (suite *AgentTestSuite) SetupSuite() {
 	suite.client = resty.New()
 }
 
-func (suite *AgentTestSuite) TestUpdateMetrics() {
+func (suite *AgentTestSuite) TestUpdateRuntimeMetrics() {
 	storage := agent.NewMemStorageRepo()
 	service := agent.NewService(suite.client, storage, suite.config, suite.logger)
-	errFirst := service.UpdateMetrics()
+	errFirst := service.UpdateRuntimeMetrics()
 	suite.Require().NoError(errFirst)
 	allocFirst, allocFirstErr := service.Storage.Get("gauge", "Alloc")
 	suite.Require().NoError(allocFirstErr)
@@ -37,7 +37,7 @@ func (suite *AgentTestSuite) TestUpdateMetrics() {
 	pollCounterFirst, pollCounterFirstErr := service.Storage.Get("counter", "PollCount")
 	suite.Require().NoError(pollCounterFirstErr)
 	suite.Require().Equal("1", pollCounterFirst)
-	errSecond := service.UpdateMetrics()
+	errSecond := service.UpdateRuntimeMetrics()
 	suite.Require().NoError(errSecond)
 	allocSecond, allocSecondErr := service.Storage.Get("gauge", "Alloc")
 	suite.Require().NoError(allocSecondErr)
@@ -52,7 +52,7 @@ func (suite *AgentTestSuite) TestSendMetrics() {
 	storage := agent.NewMemStorageRepo()
 	service := agent.NewService(suite.client, storage, suite.config, suite.logger)
 	service.SendMetrics()
-	err := service.UpdateMetrics()
+	err := service.UpdateRuntimeMetrics()
 	suite.Require().NoError(err)
 	service.SendMetrics()
 	suite.Require().NotEmpty(service.Storage.GetAll())

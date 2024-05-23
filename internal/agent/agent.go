@@ -10,6 +10,9 @@ import (
 	"runtime"
 	"sync"
 	"time"
+
+	"github.com/shirou/gopsutil/v3/cpu"
+	"github.com/shirou/gopsutil/v3/mem"
 )
 
 type Metrics struct {
@@ -69,6 +72,24 @@ func (s *Service) updateMemStats() {
 	s.Storage.StoreGauge(gaugeMetrics)
 }
 
+func (s *Service) updateGopsutilStats() error {
+	v, err := mem.VirtualMemory()
+	if err != nil {
+		return err
+	}
+	counts, err := cpu.Percent(0, false)
+	if err != nil {
+		return err
+	}
+	var gaugeMetrics = map[string]float64{
+		"TotalMemory":     float64(v.Total),
+		"FreeMemory":      float64(v.Free),
+		"CPUutilization1": counts[0],
+	}
+	s.Storage.StoreGauge(gaugeMetrics)
+	return nil
+}
+
 func (s *Service) updateRandomValue() error {
 	n1, err1 := randomInt()
 	if err1 != nil {
@@ -82,7 +103,7 @@ func (s *Service) updateRandomValue() error {
 	return nil
 }
 
-func (s *Service) RunUpdateMetrics(wg *sync.WaitGroup) {
+func (s *Service) RunUpdateGopsutilMetrics(wg *sync.WaitGroup) {
 	defer wg.Done()
 	ticker := time.NewTicker(time.Duration(s.Config.PollInterval) * time.Second)
 	defer ticker.Stop()
@@ -90,7 +111,7 @@ func (s *Service) RunUpdateMetrics(wg *sync.WaitGroup) {
 	for {
 		select {
 		case <-ticker.C:
-			err := s.UpdateMetrics()
+			err := s.updateGopsutilStats()
 			if err != nil {
 				s.Logger.Error("error to update metrics:", err)
 				stop <- true
@@ -101,8 +122,38 @@ func (s *Service) RunUpdateMetrics(wg *sync.WaitGroup) {
 	}
 }
 
-func (s *Service) UpdateMetrics() error {
-	s.Logger.Info("UpdateMetrics")
+func (s *Service) RunUpdateRuntimeMetrics(wg *sync.WaitGroup) {
+	defer wg.Done()
+	ticker := time.NewTicker(time.Duration(s.Config.PollInterval) * time.Second)
+	defer ticker.Stop()
+	stop := make(chan bool, 1)
+	for {
+		select {
+		case <-ticker.C:
+			err := s.UpdateRuntimeMetrics()
+			if err != nil {
+				s.Logger.Error("error to update metrics:", err)
+				stop <- true
+			}
+		case <-stop:
+			return
+		}
+	}
+}
+
+func (s *Service) UpdateRuntimeMetrics() error {
+	s.Logger.Info("UpdateRuntimeMetrics")
+	s.updateMemStats()
+	updateRandomValueError := s.updateRandomValue()
+	if updateRandomValueError != nil {
+		return updateRandomValueError
+	}
+	s.Storage.StoreCounter()
+	return nil
+}
+
+func (s *Service) UpdateGopsutilMetrics() error {
+	s.Logger.Info("UpdateGopsutilMetrics")
 	s.updateMemStats()
 	updateRandomValueError := s.updateRandomValue()
 	if updateRandomValueError != nil {
