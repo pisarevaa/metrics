@@ -37,6 +37,7 @@ func NewHandler(config Config, logger *zap.SugaredLogger, repo storage.Storage) 
 func (s *Handler) Ping(w http.ResponseWriter, r *http.Request) {
 	err := s.Storage.Ping(r.Context())
 	if err != nil {
+		s.Logger.Error(err)
 		http.Error(w, "DBPool is not initialized!", http.StatusInternalServerError)
 		return
 	}
@@ -49,14 +50,17 @@ func (s *Handler) StoreMetrics(w http.ResponseWriter, r *http.Request) {
 	metricValue := chi.URLParam(r, "metricValue")
 
 	if !(metricType == storage.Gauge || metricType == storage.Counter) {
+		s.Logger.Error("Only 'gauge' and 'counter' values are not allowed!")
 		http.Error(w, "Only 'gauge' and 'counter' values are not allowed!", http.StatusBadRequest)
 		return
 	}
 	if metricName == "" {
+		s.Logger.Error("Empty metricName is not allowed!")
 		http.Error(w, "Empty metricName is not allowed!", http.StatusNotFound)
 		return
 	}
 	if metricValue == "" || metricValue == "none" {
+		s.Logger.Error("Empty metricValue is not allowed!")
 		http.Error(w, "Empty metricValue is not allowed!", http.StatusBadRequest)
 		return
 	}
@@ -69,6 +73,7 @@ func (s *Handler) StoreMetrics(w http.ResponseWriter, r *http.Request) {
 	if metricType == storage.Gauge {
 		floatValue, err := strconv.ParseFloat(metricValue, 64)
 		if err != nil {
+			s.Logger.Error("metricValue is not corect float")
 			http.Error(w, "metricValue is not corect float", http.StatusBadRequest)
 			return
 		}
@@ -77,6 +82,7 @@ func (s *Handler) StoreMetrics(w http.ResponseWriter, r *http.Request) {
 	if metricType == storage.Counter {
 		intValue, err := strconv.ParseInt(metricValue, 10, 64)
 		if err != nil {
+			s.Logger.Error("metricValue is not correct integer")
 			http.Error(w, "metricValue is not correct integer", http.StatusBadRequest)
 			return
 		}
@@ -85,6 +91,7 @@ func (s *Handler) StoreMetrics(w http.ResponseWriter, r *http.Request) {
 
 	err := s.Storage.StoreMetric(r.Context(), metric)
 	if err != nil {
+		s.Logger.Error("Error to store metric")
 		http.Error(w, "Error to store metric", http.StatusBadRequest)
 		return
 	}
@@ -132,11 +139,13 @@ func (s *Handler) StoreMetricsJSON(w http.ResponseWriter, r *http.Request) { //n
 	if s.Config.StoreInterval == 0 {
 		metrics, errMetrics := s.Storage.GetAllMetrics(r.Context())
 		if errMetrics != nil {
+			s.Logger.Error("Error to get all metrics")
 			http.Error(w, "Error to get all metrics", http.StatusBadRequest)
 			return
 		}
 		err = SaveToDisk(metrics, s.Config.FileStoragePath)
 		if err != nil {
+			s.Logger.Error(err)
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
@@ -183,13 +192,16 @@ func (s *Handler) StoreMetricsJSONBatches(w http.ResponseWriter, r *http.Request
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+	s.Logger.Info("metrics updates: ", metrics)
 
 	for _, metric := range metrics {
 		if !(metric.MType == storage.Gauge || metric.MType == storage.Counter) {
+			s.Logger.Error("Only 'gauge' and 'counter' values are allowed!")
 			http.Error(w, "Only 'gauge' and 'counter' values are allowed!", http.StatusBadRequest)
 			return
 		}
 		if metric.ID == "" {
+			s.Logger.Error("Empty metric id is not allowed!")
 			http.Error(w, "Empty metric id is not allowed!", http.StatusNotFound)
 			return
 		}
@@ -197,6 +209,7 @@ func (s *Handler) StoreMetricsJSONBatches(w http.ResponseWriter, r *http.Request
 
 	err = s.Storage.StoreMetrics(r.Context(), metrics)
 	if err != nil {
+		s.Logger.Error(err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -204,6 +217,7 @@ func (s *Handler) StoreMetricsJSONBatches(w http.ResponseWriter, r *http.Request
 	if s.Config.StoreInterval == 0 {
 		err = SaveToDisk(metrics, s.Config.FileStoragePath)
 		if err != nil {
+			s.Logger.Error(err)
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
@@ -219,10 +233,12 @@ func (s *Handler) GetMetric(w http.ResponseWriter, r *http.Request) {
 	metricName := chi.URLParam(r, "metricName")
 
 	if !(metricType == storage.Gauge || metricType == storage.Counter) {
+		s.Logger.Error("Only 'gauge' and 'counter' values are allowed!")
 		http.Error(w, "Only 'gauge' and 'counter' values are allowed!", http.StatusBadRequest)
 		return
 	}
 	if metricName == "" {
+		s.Logger.Error("Empty metricName is not allowed!")
 		http.Error(w, "Empty metricName is not allowed!", http.StatusNotFound)
 		return
 	}
@@ -235,6 +251,7 @@ func (s *Handler) GetMetric(w http.ResponseWriter, r *http.Request) {
 
 	metric, err := s.Storage.GetMetric(r.Context(), query.ID, query.MType)
 	if err != nil {
+		s.Logger.Error(err)
 		http.Error(w, err.Error(), http.StatusNotFound)
 		return
 	}
@@ -243,6 +260,7 @@ func (s *Handler) GetMetric(w http.ResponseWriter, r *http.Request) {
 		valueString := strconv.FormatFloat(metric.Value, 'f', -1, 64)
 		_, errWtrite := io.WriteString(w, valueString)
 		if errWtrite != nil {
+			s.Logger.Error(errWtrite)
 			http.Error(w, errWtrite.Error(), http.StatusBadRequest)
 			return
 		}
@@ -251,6 +269,7 @@ func (s *Handler) GetMetric(w http.ResponseWriter, r *http.Request) {
 		valueString := strconv.FormatInt(metric.Delta, 10)
 		_, errWtrite := io.WriteString(w, valueString)
 		if errWtrite != nil {
+			s.Logger.Error(errWtrite)
 			http.Error(w, errWtrite.Error(), http.StatusBadRequest)
 			return
 		}
@@ -288,6 +307,8 @@ func (s *Handler) GetMetricJSON(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	s.Logger.Info("metric: ", metric)
+
 	resp, err := metric.ToJSON()
 	if err != nil {
 		s.Logger.Error(err)
@@ -308,6 +329,7 @@ func (s *Handler) GetMetricJSON(w http.ResponseWriter, r *http.Request) {
 func (s *Handler) GetAllMetrics(w http.ResponseWriter, r *http.Request) {
 	metrics, err := s.Storage.GetAllMetrics(r.Context())
 	if err != nil {
+		s.Logger.Error(err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -322,6 +344,7 @@ func (s *Handler) GetAllMetrics(w http.ResponseWriter, r *http.Request) {
 		}
 		_, err = w.Write([]byte(row))
 		if err != nil {
+			s.Logger.Error(err)
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}

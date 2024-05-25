@@ -8,25 +8,28 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/pisarevaa/metrics/internal/agent"
+	"github.com/pisarevaa/metrics/internal/agent/utils"
 )
 
 type AgentTestSuite struct {
 	suite.Suite
-	client *resty.Client
-	config agent.Config
-	logger *zap.SugaredLogger
+	client    *resty.Client
+	config    agent.Config
+	logger    *zap.SugaredLogger
+	semaphore *utils.Semaphore
 }
 
 func (suite *AgentTestSuite) SetupSuite() {
 	suite.config = agent.GetConfig()
 	suite.logger = agent.GetLogger()
 	suite.client = resty.New()
+	suite.semaphore = utils.NewSemaphore(suite.config.RateLimit)
 }
 
-func (suite *AgentTestSuite) TestUpdateMetrics() {
+func (suite *AgentTestSuite) TestUpdateRuntimeMetrics() {
 	storage := agent.NewMemStorageRepo()
-	service := agent.NewService(suite.client, storage, suite.config, suite.logger)
-	errFirst := service.UpdateMetrics()
+	service := agent.NewService(suite.client, storage, suite.config, suite.logger, suite.semaphore)
+	errFirst := service.UpdateRuntimeMetrics()
 	suite.Require().NoError(errFirst)
 	allocFirst, allocFirstErr := service.Storage.Get("gauge", "Alloc")
 	suite.Require().NoError(allocFirstErr)
@@ -37,7 +40,7 @@ func (suite *AgentTestSuite) TestUpdateMetrics() {
 	pollCounterFirst, pollCounterFirstErr := service.Storage.Get("counter", "PollCount")
 	suite.Require().NoError(pollCounterFirstErr)
 	suite.Require().Equal("1", pollCounterFirst)
-	errSecond := service.UpdateMetrics()
+	errSecond := service.UpdateRuntimeMetrics()
 	suite.Require().NoError(errSecond)
 	allocSecond, allocSecondErr := service.Storage.Get("gauge", "Alloc")
 	suite.Require().NoError(allocSecondErr)
@@ -50,9 +53,9 @@ func (suite *AgentTestSuite) TestUpdateMetrics() {
 
 func (suite *AgentTestSuite) TestSendMetrics() {
 	storage := agent.NewMemStorageRepo()
-	service := agent.NewService(suite.client, storage, suite.config, suite.logger)
+	service := agent.NewService(suite.client, storage, suite.config, suite.logger, suite.semaphore)
 	service.SendMetrics()
-	err := service.UpdateMetrics()
+	err := service.UpdateRuntimeMetrics()
 	suite.Require().NoError(err)
 	service.SendMetrics()
 	suite.Require().NotEmpty(service.Storage.GetAll())

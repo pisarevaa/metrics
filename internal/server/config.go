@@ -13,6 +13,7 @@ type Config struct {
 	FileStoragePath string `env:"FILE_STORAGE_PATH"`
 	Restore         bool   `env:"RESTORE"`
 	DatabaseDSN     string `env:"DATABASE_DSN"`
+	Key             string `env:"KEY"`
 }
 
 func GetConfig() Config {
@@ -23,6 +24,7 @@ func GetConfig() Config {
 	flag.StringVar(&config.FileStoragePath, "f", "/tmp/metrics-db.json", "path to save metrics")
 	flag.BoolVar(&config.Restore, "r", true, "retore previous metrics data")
 	flag.StringVar(&config.DatabaseDSN, "d", "", "database dsn")
+	flag.StringVar(&config.Key, "k", "", "Key for hashing")
 	flag.Parse()
 	if len(flag.Args()) > 0 {
 		log.Fatal("used not declared arguments")
@@ -48,6 +50,9 @@ func GetConfig() Config {
 	}
 	if envConfig.DatabaseDSN != "" {
 		config.DatabaseDSN = envConfig.DatabaseDSN
+	}
+	if envConfig.Key != "" {
+		config.Key = envConfig.Key
 	}
 
 	return config

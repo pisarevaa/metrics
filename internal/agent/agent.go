@@ -3,6 +3,7 @@ package agent
 import (
 	"bytes"
 	"compress/gzip"
+	"context"
 	"crypto/rand"
 	"encoding/json"
 	"fmt"
@@ -10,6 +11,11 @@ import (
 	"runtime"
 	"sync"
 	"time"
+
+	"github.com/shirou/gopsutil/v3/cpu"
+	"github.com/shirou/gopsutil/v3/mem"
+
+	"github.com/pisarevaa/metrics/internal/agent/utils"
 )
 
 type Metrics struct {
@@ -69,6 +75,25 @@ func (s *Service) updateMemStats() {
 	s.Storage.StoreGauge(gaugeMetrics)
 }
 
+func (s *Service) updateGopsutilStats() error {
+	s.Logger.Info("UpdateGopsutilMetrics")
+	v, err := mem.VirtualMemory()
+	if err != nil {
+		return err
+	}
+	counts, err := cpu.Percent(0, false)
+	if err != nil {
+		return err
+	}
+	var gaugeMetrics = map[string]float64{
+		"TotalMemory":     float64(v.Total),
+		"FreeMemory":      float64(v.Free),
+		"CPUutilization1": counts[0],
+	}
+	s.Storage.StoreGauge(gaugeMetrics)
+	return nil
+}
+
 func (s *Service) updateRandomValue() error {
 	n1, err1 := randomInt()
 	if err1 != nil {
@@ -82,7 +107,31 @@ func (s *Service) updateRandomValue() error {
 	return nil
 }
 
-func (s *Service) RunUpdateMetrics(wg *sync.WaitGroup) {
+func (s *Service) RunUpdateGopsutilMetrics(ctx context.Context, wg *sync.WaitGroup) {
+	defer wg.Done()
+	ticker := time.NewTicker(time.Duration(s.Config.PollInterval) * time.Second)
+	defer ticker.Stop()
+	stop := make(chan bool, 1)
+	for {
+		select {
+		case <-ctx.Done():
+			stop <- true
+			s.Logger.Error("ctx.Done -> exit RunUpdateRuntimeMetrics")
+			return
+		case <-stop:
+			s.Logger.Error("stop -> exit RunUpdateRuntimeMetrics")
+			return
+		case <-ticker.C:
+			err := s.updateGopsutilStats()
+			if err != nil {
+				s.Logger.Error("error to update metrics:", err)
+				stop <- true
+			}
+		}
+	}
+}
+
+func (s *Service) RunUpdateRuntimeMetrics(ctx context.Context, wg *sync.WaitGroup) {
 	defer wg.Done()
 	ticker := time.NewTicker(time.Duration(s.Config.PollInterval) * time.Second)
 	defer ticker.Stop()
@@ -90,19 +139,24 @@ func (s *Service) RunUpdateMetrics(wg *sync.WaitGroup) {
 	for {
 		select {
 		case <-ticker.C:
-			err := s.UpdateMetrics()
+			err := s.UpdateRuntimeMetrics()
 			if err != nil {
 				s.Logger.Error("error to update metrics:", err)
 				stop <- true
 			}
+		case <-ctx.Done():
+			stop <- true
+			s.Logger.Error("ctx.Done -> exit RunUpdateRuntimeMetrics")
+			return
 		case <-stop:
+			s.Logger.Error("stop -> exit RunUpdateRuntimeMetrics")
 			return
 		}
 	}
 }
 
-func (s *Service) UpdateMetrics() error {
-	s.Logger.Info("UpdateMetrics")
+func (s *Service) UpdateRuntimeMetrics() error {
+	s.Logger.Info("UpdateRuntimeMetrics")
 	s.updateMemStats()
 	updateRandomValueError := s.updateRandomValue()
 	if updateRandomValueError != nil {
@@ -112,10 +166,34 @@ func (s *Service) UpdateMetrics() error {
 	return nil
 }
 
-func (s *Service) RunSendMetrics(wg *sync.WaitGroup) {
+func (s *Service) UpdateGopsutilMetrics() error {
+	s.Logger.Info("UpdateGopsutilMetrics")
+	s.updateMemStats()
+	updateRandomValueError := s.updateRandomValue()
+	if updateRandomValueError != nil {
+		return updateRandomValueError
+	}
+	s.Storage.StoreCounter()
+	return nil
+}
+
+func (s *Service) RunSendMetrics(ctx context.Context, wg *sync.WaitGroup) {
 	defer wg.Done()
-	for range time.Tick(time.Duration(s.Config.ReportInterval) * time.Second) {
-		s.SendMetrics()
+	ticker := time.NewTicker(time.Duration(s.Config.ReportInterval) * time.Second)
+	defer ticker.Stop()
+	stop := make(chan bool, 1)
+	for {
+		select {
+		case <-ctx.Done():
+			stop <- true
+			s.Logger.Error("ctx.Done -> exit RunSendMetric")
+			return
+		case <-stop:
+			s.Logger.Error("stop -> exit RunSendMetric")
+			return
+		case <-ticker.C:
+			s.SendMetrics()
+		}
 	}
 }
 
@@ -138,17 +216,28 @@ func (s *Service) makeHTTPRequest(metrics []Metrics) {
 		s.Logger.Error(err)
 		return
 	}
-	_, err = s.Client.R().
+	r := s.Client.R().
 		SetHeader("Content-Type", "application/json").
 		SetHeader("Content-Encoding", "gzip").
-		SetBody(buf).
-		Post(requestURL)
+		SetBody(buf)
+	if s.Config.Key != "" {
+		hash, errHash := utils.GetBodyHash(payloadString, s.Config.Key)
+		if errHash != nil {
+			s.Logger.Error(errHash)
+			return
+		}
+		s.Logger.Info("Hash", hash)
+		r.SetHeader("Hash", hash)
+	}
+	_, err = r.Post(requestURL)
 	if err != nil {
 		s.Logger.Error("error making http request: ", err)
 	}
 }
 
 func (s *Service) SendMetrics() {
+	s.Semaphore.Acquire()
+	defer s.Semaphore.Release()
 	metrics := s.Storage.GetMetrics()
 	s.makeHTTPRequest(metrics)
 	s.Logger.Info("Send Gauge", s.Storage.Gauge)
