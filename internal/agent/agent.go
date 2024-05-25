@@ -14,6 +14,8 @@ import (
 
 	"github.com/shirou/gopsutil/v3/cpu"
 	"github.com/shirou/gopsutil/v3/mem"
+
+	"github.com/pisarevaa/metrics/internal/agent/utils"
 )
 
 type Metrics struct {
@@ -219,7 +221,7 @@ func (s *Service) makeHTTPRequest(metrics []Metrics) {
 		SetHeader("Content-Encoding", "gzip").
 		SetBody(buf)
 	if s.Config.Key != "" {
-		hash, errHash := GetBodyHash(payloadString, s.Config.Key)
+		hash, errHash := utils.GetBodyHash(payloadString, s.Config.Key)
 		if errHash != nil {
 			s.Logger.Error(errHash)
 			return

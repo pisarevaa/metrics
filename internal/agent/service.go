@@ -3,6 +3,8 @@ package agent
 import (
 	"github.com/go-resty/resty/v2"
 	"go.uber.org/zap"
+
+	"github.com/pisarevaa/metrics/internal/agent/utils"
 )
 
 type Service struct {
@@ -10,7 +12,7 @@ type Service struct {
 	Storage   *MemStorage
 	Config    Config
 	Logger    *zap.SugaredLogger
-	Semaphore *Semaphore
+	Semaphore *utils.Semaphore
 }
 
 func NewService(
@@ -18,7 +20,7 @@ func NewService(
 	storage *MemStorage,
 	config Config,
 	logger *zap.SugaredLogger,
-	semaphore *Semaphore,
+	semaphore *utils.Semaphore,
 ) *Service {
 	return &Service{
 		Client:    client,

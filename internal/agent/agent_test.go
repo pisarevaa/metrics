@@ -8,6 +8,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/pisarevaa/metrics/internal/agent"
+	"github.com/pisarevaa/metrics/internal/agent/utils"
 )
 
 type AgentTestSuite struct {
@@ -15,14 +16,14 @@ type AgentTestSuite struct {
 	client    *resty.Client
 	config    agent.Config
 	logger    *zap.SugaredLogger
-	semaphore *agent.Semaphore
+	semaphore *utils.Semaphore
 }
 
 func (suite *AgentTestSuite) SetupSuite() {
 	suite.config = agent.GetConfig()
 	suite.logger = agent.GetLogger()
 	suite.client = resty.New()
-	suite.semaphore = agent.NewSemaphore(suite.config.RateLimit)
+	suite.semaphore = utils.NewSemaphore(suite.config.RateLimit)
 }
 
 func (suite *AgentTestSuite) TestUpdateRuntimeMetrics() {

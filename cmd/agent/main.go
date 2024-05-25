@@ -5,32 +5,25 @@ import (
 	"os"
 	"os/signal"
 	"sync"
-	"syscall"
 
 	"github.com/pisarevaa/metrics/internal/agent"
+	"github.com/pisarevaa/metrics/internal/agent/utils"
 )
 
 const processes = 3
 
 func main() {
-	sig := make(chan os.Signal, 1)
-	signal.Notify(sig, syscall.SIGTERM, syscall.SIGINT)
-
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
+	ctx, stop := signal.NotifyContext(ctx, os.Interrupt)
+	defer stop()
 
 	config := agent.GetConfig()
 	client := agent.NewClient()
 	logger := agent.GetLogger()
 	storage := agent.NewMemStorageRepo()
 
-	go func() {
-		s := <-sig
-		logger.Info("Received signal:", s.String())
-		cancel()
-	}()
-
-	semaphore := agent.NewSemaphore(config.RateLimit)
+	semaphore := utils.NewSemaphore(config.RateLimit)
 	service := agent.NewService(client, storage, config, logger, semaphore)
 	var wg sync.WaitGroup
 	wg.Add(processes)

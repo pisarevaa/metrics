@@ -1,4 +1,4 @@
-package agent
+package utils
 
 type Semaphore struct {
 	semaCh chan struct{}
