@@ -5,12 +5,19 @@ import (
 	"os"
 	"os/signal"
 	"sync"
+	"time"
+
+	"net/http"
 
 	"github.com/pisarevaa/metrics/internal/agent"
 	"github.com/pisarevaa/metrics/internal/agent/utils"
+
+	_ "net/http/pprof" //nolint:gosec // profiling agent
 )
 
 const processes = 3
+const readTimeout = 5
+const writeTimout = 10
 
 func main() {
 	ctx, cancel := context.WithCancel(context.Background())
@@ -25,6 +32,20 @@ func main() {
 
 	semaphore := utils.NewSemaphore(config.RateLimit)
 	service := agent.NewService(client, storage, config, logger, semaphore)
+
+	// Profiling agent http://127.0.0.1:8080/debug/pprof/
+	httpServer := &http.Server{
+		Addr:         "localhost:8085",
+		ReadTimeout:  readTimeout * time.Second,
+		WriteTimeout: writeTimout * time.Second,
+	}
+	go func() {
+		err := httpServer.ListenAndServe()
+		if err != nil {
+			_ = httpServer.Shutdown(context.Background())
+		}
+	}()
+
 	var wg sync.WaitGroup
 	wg.Add(processes)
 	logger.Info("Client is running...")
@@ -32,5 +53,6 @@ func main() {
 	go service.RunUpdateGopsutilMetrics(ctx, &wg)
 	go service.RunSendMetrics(ctx, &wg)
 	wg.Wait()
+
 	logger.Error("exit programm")
 }

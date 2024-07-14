@@ -6,6 +6,8 @@ import (
 
 	"github.com/pisarevaa/metrics/internal/server"
 	"github.com/pisarevaa/metrics/internal/server/storage"
+
+	_ "net/http/pprof" //nolint:gosec // profiling agent
 )
 
 const readTimeout = 5
