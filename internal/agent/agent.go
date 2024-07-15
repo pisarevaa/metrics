@@ -25,11 +25,13 @@ type Metrics struct {
 	Value float64 `json:"value"` // значение метрики в случае передачи gauge
 }
 
+// Типы метрик.
 const (
 	gauge   = "gauge"
 	counter = "counter"
 )
 
+// Получение случайного int числа.
 func randomInt() (int64, error) {
 	const maxInt = 1000000
 	nBig, err := rand.Int(rand.Reader, big.NewInt(maxInt))
@@ -40,6 +42,7 @@ func randomInt() (int64, error) {
 	return n, nil
 }
 
+// Получение и сохранение данных по памяти.
 func (s *Service) updateMemStats() {
 	var memStats runtime.MemStats
 	runtime.ReadMemStats(&memStats)
@@ -75,6 +78,7 @@ func (s *Service) updateMemStats() {
 	s.Storage.StoreGauge(gaugeMetrics)
 }
 
+// Получение и сохранение данных по процессору.
 func (s *Service) updateGopsutilStats() error {
 	s.Logger.Info("UpdateGopsutilMetrics")
 	v, err := mem.VirtualMemory()
@@ -94,6 +98,7 @@ func (s *Service) updateGopsutilStats() error {
 	return nil
 }
 
+// Получение и сохранение данных по случайному числу.
 func (s *Service) updateRandomValue() error {
 	n1, err1 := randomInt()
 	if err1 != nil {
@@ -107,6 +112,7 @@ func (s *Service) updateRandomValue() error {
 	return nil
 }
 
+// Запуск бесконечного повторяющиегося цикла по получению и сохранению метрик по процессору.
 func (s *Service) RunUpdateGopsutilMetrics(ctx context.Context, wg *sync.WaitGroup) {
 	defer wg.Done()
 	ticker := time.NewTicker(time.Duration(s.Config.PollInterval) * time.Second)
@@ -131,6 +137,7 @@ func (s *Service) RunUpdateGopsutilMetrics(ctx context.Context, wg *sync.WaitGro
 	}
 }
 
+// Запуск бесконечного повторяющиегося цикла по получению и сохранению runtime метрик.
 func (s *Service) RunUpdateRuntimeMetrics(ctx context.Context, wg *sync.WaitGroup) {
 	defer wg.Done()
 	ticker := time.NewTicker(time.Duration(s.Config.PollInterval) * time.Second)
@@ -155,6 +162,7 @@ func (s *Service) RunUpdateRuntimeMetrics(ctx context.Context, wg *sync.WaitGrou
 	}
 }
 
+// Получение и отправка runtime метрик.
 func (s *Service) UpdateRuntimeMetrics() error {
 	s.Logger.Info("UpdateRuntimeMetrics")
 	s.updateMemStats()
@@ -166,17 +174,7 @@ func (s *Service) UpdateRuntimeMetrics() error {
 	return nil
 }
 
-func (s *Service) UpdateGopsutilMetrics() error {
-	s.Logger.Info("UpdateGopsutilMetrics")
-	s.updateMemStats()
-	updateRandomValueError := s.updateRandomValue()
-	if updateRandomValueError != nil {
-		return updateRandomValueError
-	}
-	s.Storage.StoreCounter()
-	return nil
-}
-
+// Запуск бесконечного повторяющиегося цикла по отправке метрик.
 func (s *Service) RunSendMetrics(ctx context.Context, wg *sync.WaitGroup) {
 	defer wg.Done()
 	ticker := time.NewTicker(time.Duration(s.Config.ReportInterval) * time.Second)
@@ -197,6 +195,7 @@ func (s *Service) RunSendMetrics(ctx context.Context, wg *sync.WaitGroup) {
 	}
 }
 
+// Создание запроса по отправке метрик.
 func (s *Service) makeHTTPRequest(metrics []Metrics) {
 	requestURL := fmt.Sprintf("http://%v/updates/", s.Config.Host)
 	buf := bytes.NewBuffer(nil)
@@ -235,6 +234,7 @@ func (s *Service) makeHTTPRequest(metrics []Metrics) {
 	}
 }
 
+// Отправка метрик на сервер.
 func (s *Service) SendMetrics() {
 	s.Semaphore.Acquire()
 	defer s.Semaphore.Release()

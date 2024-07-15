@@ -16,6 +16,7 @@ type Config struct {
 	Key             string `env:"KEY"`
 }
 
+// Получение конфигурации агента.
 func GetConfig() Config {
 	var config Config
 

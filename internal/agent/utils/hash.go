@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 )
 
+// Получение хеша тела запроса с добавлением соли key.
 func GetBodyHash(payload []byte, key string) (string, error) {
 	payload = append(payload, []byte(key)...)
 	h := sha256.New()

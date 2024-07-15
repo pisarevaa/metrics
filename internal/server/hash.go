@@ -8,6 +8,7 @@ import (
 	"net/http"
 )
 
+// Получение хеша тела запроса с добавлением соли key.
 func GetBodyHash(payload []byte, key string) (string, error) {
 	payload = append(payload, []byte(key)...)
 	h := sha256.New()
@@ -19,6 +20,7 @@ func GetBodyHash(payload []byte, key string) (string, error) {
 	return sha, nil
 }
 
+// Мидлвар про проверке хеша запроса.
 func (s *Handler) HashCheckMiddleware(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		hashInHeader := r.Header.Get("Hash")

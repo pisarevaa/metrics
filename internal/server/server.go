@@ -10,6 +10,7 @@ import (
 	"github.com/pisarevaa/metrics/internal/server/storage"
 )
 
+// Создание роутера.
 func MetricsRouter(
 	config Config,
 	logger *zap.SugaredLogger,

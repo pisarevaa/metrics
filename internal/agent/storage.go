@@ -6,12 +6,14 @@ import (
 	"sync"
 )
 
+// Метрики хранятся в памяти и во избежании race condition используется mutex.
 type MemStorage struct {
 	mx      sync.Mutex
 	Gauge   map[string]float64
 	Counter map[string]int64
 }
 
+// Создание хранилища метрик.
 func NewMemStorageRepo() *MemStorage {
 	return &MemStorage{
 		Gauge:   make(map[string]float64),
@@ -19,6 +21,7 @@ func NewMemStorageRepo() *MemStorage {
 	}
 }
 
+// Сохранение gauge метрик.
 func (ms *MemStorage) StoreGauge(metrics map[string]float64) {
 	ms.mx.Lock()
 	defer ms.mx.Unlock()
@@ -27,12 +30,14 @@ func (ms *MemStorage) StoreGauge(metrics map[string]float64) {
 	}
 }
 
+// Сохранение counter метрик.
 func (ms *MemStorage) StoreCounter() {
 	ms.mx.Lock()
 	defer ms.mx.Unlock()
 	ms.Counter["PollCount"]++
 }
 
+// Получение метрик.
 func (ms *MemStorage) GetMetrics() []Metrics {
 	ms.mx.Lock()
 	defer ms.mx.Unlock()
@@ -56,6 +61,7 @@ func (ms *MemStorage) GetMetrics() []Metrics {
 	return metrics
 }
 
+// Получение метрики по имени.
 func (ms *MemStorage) Get(metricType, metricName string) (string, error) {
 	if metricType == gauge {
 		value, ok := ms.Gauge[metricName]
@@ -76,6 +82,7 @@ func (ms *MemStorage) Get(metricType, metricName string) (string, error) {
 	return "", errors.New("not handled metricType")
 }
 
+// Получение всех метрик.
 func (ms *MemStorage) GetAll() map[string]string {
 	metricsMap := make(map[string]string)
 	metrics := ms.GetMetrics()

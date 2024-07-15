@@ -12,6 +12,7 @@ type MemStorage struct {
 	Counter map[string]int64   `json:"counter"`
 }
 
+// Создание мемори движка хранение метрик.
 func NewMemStorage() *MemStorage {
 	return &MemStorage{
 		Gauge:   make(map[string]float64),
@@ -19,6 +20,7 @@ func NewMemStorage() *MemStorage {
 	}
 }
 
+// Сохранение метрики.
 func (ms *MemStorage) StoreMetric(_ context.Context, metric Metrics) error {
 	ms.mx.Lock()
 	defer ms.mx.Unlock()
@@ -31,6 +33,7 @@ func (ms *MemStorage) StoreMetric(_ context.Context, metric Metrics) error {
 	return nil
 }
 
+// Сохранение метрик.
 func (ms *MemStorage) StoreMetrics(_ context.Context, metrics []Metrics) error {
 	ms.mx.Lock()
 	defer ms.mx.Unlock()
@@ -45,6 +48,7 @@ func (ms *MemStorage) StoreMetrics(_ context.Context, metrics []Metrics) error {
 	return nil
 }
 
+// Получение метрики.
 func (ms *MemStorage) GetMetric(_ context.Context, id string, mtype string) (Metrics, error) {
 	if mtype == Gauge {
 		for metric, value := range ms.Gauge {
@@ -71,6 +75,7 @@ func (ms *MemStorage) GetMetric(_ context.Context, id string, mtype string) (Met
 	return Metrics{}, errors.New("metric is not found")
 }
 
+// Получение метрик.
 func (ms *MemStorage) GetAllMetrics(_ context.Context) ([]Metrics, error) {
 	var metrics []Metrics
 	for metric, value := range ms.Gauge {
@@ -92,8 +97,10 @@ func (ms *MemStorage) GetAllMetrics(_ context.Context) ([]Metrics, error) {
 	return metrics, nil
 }
 
+// Пинг хранилища.
 func (ms *MemStorage) Ping(_ context.Context) error {
 	return nil
 }
 
+// Закрытие соединения.
 func (ms *MemStorage) CloseConnection() {}

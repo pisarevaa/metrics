@@ -8,13 +8,14 @@ import (
 )
 
 type Service struct {
-	Client    *resty.Client
-	Storage   *MemStorage
-	Config    Config
-	Logger    *zap.SugaredLogger
-	Semaphore *utils.Semaphore
+	Client    *resty.Client      // клиент для внешних запросов
+	Storage   *MemStorage        // хранилище метрик
+	Config    Config             // параметры конфигурации
+	Logger    *zap.SugaredLogger // логер
+	Semaphore *utils.Semaphore   // семафор
 }
 
+// Созание нового сервиса.
 func NewService(
 	client *resty.Client,
 	storage *MemStorage,

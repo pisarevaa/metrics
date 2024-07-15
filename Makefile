@@ -15,13 +15,13 @@ test_agent:
 test_server:
 	go clean -testcache && go test -v ./internal/server
 
-pprof_heap_agent:
+pprof_profile_agent:
 	go tool pprof -http=":9090" -seconds=9 http://localhost:8085/debug/pprof/profile
 
 pprof_heap_agent:
 	go tool pprof -http=":9090" -seconds=9 http://localhost:8085/debug/pprof/heap
 
-pprof_heap_server:
+pprof_profile_server:
 	go tool pprof -http=":9090" -seconds=9 http://localhost:8080/debug/pprof/profile
 
 pprof_heap_server:
@@ -32,6 +32,9 @@ test_server_speed:
 
 mock_generate:
 	mockgen -source=internal/server/storage/types.go -destination=internal/server/mocks/storage.go -package=mock Storage
+
+doc_generate:
+	godoc -http=:8080
 
 lint:
 	go fmt ./...

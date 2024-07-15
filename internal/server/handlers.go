@@ -27,6 +27,7 @@ type QueryMetrics struct {
 	MType string `json:"type"`
 }
 
+// Создание хедлера.
 func NewHandler(config Config, logger *zap.SugaredLogger, repo storage.Storage) *Handler {
 	return &Handler{
 		Config:  config,
@@ -35,6 +36,7 @@ func NewHandler(config Config, logger *zap.SugaredLogger, repo storage.Storage) 
 	}
 }
 
+// Проверка подключения к БД.
 func (s *Handler) Ping(w http.ResponseWriter, r *http.Request) {
 	err := s.Storage.Ping(r.Context())
 	if err != nil {
@@ -45,6 +47,7 @@ func (s *Handler) Ping(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
+// Созранение метрик в урле.
 func (s *Handler) StoreMetrics(w http.ResponseWriter, r *http.Request) {
 	metricType := chi.URLParam(r, "metricType")
 	metricName := chi.URLParam(r, "metricName")
@@ -103,6 +106,7 @@ func (s *Handler) StoreMetrics(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
+// Созранение метрик в json формате.
 func (s *Handler) StoreMetricsJSON(w http.ResponseWriter, r *http.Request) { //nolint:funlen /// TODO: refactor
 	var metric storage.Metrics
 	var buf bytes.Buffer
@@ -179,6 +183,7 @@ func (s *Handler) StoreMetricsJSON(w http.ResponseWriter, r *http.Request) { //n
 	w.WriteHeader(http.StatusOK)
 }
 
+// Созранение метрик пачкой в json формате.
 func (s *Handler) StoreMetricsJSONBatches(w http.ResponseWriter, r *http.Request) {
 	var metrics []storage.Metrics
 	var buf bytes.Buffer
@@ -229,6 +234,7 @@ func (s *Handler) StoreMetricsJSONBatches(w http.ResponseWriter, r *http.Request
 	w.WriteHeader(http.StatusOK)
 }
 
+// Получение метрик через урл.
 func (s *Handler) GetMetric(w http.ResponseWriter, r *http.Request) {
 	metricType := chi.URLParam(r, "metricType")
 	metricName := chi.URLParam(r, "metricName")
@@ -279,6 +285,7 @@ func (s *Handler) GetMetric(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
+// Получение метрик через json.
 func (s *Handler) GetMetricJSON(w http.ResponseWriter, r *http.Request) {
 	var query QueryMetrics
 	var buf bytes.Buffer
@@ -327,6 +334,7 @@ func (s *Handler) GetMetricJSON(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// Получение метрик всех метрик.
 func (s *Handler) GetAllMetrics(w http.ResponseWriter, r *http.Request) {
 	metrics, err := s.Storage.GetAllMetrics(r.Context())
 	if err != nil {
@@ -352,6 +360,7 @@ func (s *Handler) GetAllMetrics(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// Запуск таски записи на диск.
 func (s *Handler) RunTaskSaveToDisk() {
 	ticker := time.NewTicker(time.Duration(s.Config.StoreInterval) * time.Second)
 	defer ticker.Stop()

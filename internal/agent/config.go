@@ -15,6 +15,7 @@ type Config struct {
 	RateLimit      int    `env:"RATE_LIMIT"`
 }
 
+// Получение конфигурации агента.
 func GetConfig() Config {
 	var config Config
 

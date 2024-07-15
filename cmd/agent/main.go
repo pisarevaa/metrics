@@ -1,3 +1,4 @@
+// Модуль agent отвечает за отправку метрик на сервер.
 package main
 
 import (
@@ -15,7 +16,7 @@ import (
 	_ "net/http/pprof" //nolint:gosec // profiling agent
 )
 
-const processes = 3
+const processes = 3 // количество гоурутин
 const readTimeout = 5
 const writeTimout = 10
 
