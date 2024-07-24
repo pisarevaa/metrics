@@ -7,6 +7,7 @@ import (
 	"github.com/pisarevaa/metrics/internal/server/storage"
 )
 
+// Сохранение структуры на диск.
 func SaveToDisk(metrics []storage.Metrics, filename string) error {
 	if filename == "" {
 		return nil
@@ -27,6 +28,7 @@ func SaveToDisk(metrics []storage.Metrics, filename string) error {
 	return nil
 }
 
+// Получение структуры с диска.
 func LoadFromDosk(filename string) ([]storage.Metrics, error) {
 	if filename == "" {
 		return []storage.Metrics{}, nil

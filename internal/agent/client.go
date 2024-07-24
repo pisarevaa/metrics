@@ -11,6 +11,8 @@ const retries = 3
 const retryWaitTime = 1
 const retryMaxWaitTime = 20
 
+// Создание клиента для оптравки метрик.
+// Ключевой момент что сервер может быть недостпуен и ниже реализована логика таймаута.
 func NewClient() *resty.Client {
 	client := resty.New()
 	client.

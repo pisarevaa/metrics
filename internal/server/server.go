@@ -4,10 +4,13 @@ import (
 	"context"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/pisarevaa/metrics/internal/server/storage"
+	"github.com/go-chi/chi/v5/middleware"
 	"go.uber.org/zap"
+
+	"github.com/pisarevaa/metrics/internal/server/storage"
 )
 
+// Создание роутера.
 func MetricsRouter(
 	config Config,
 	logger *zap.SugaredLogger,
@@ -27,6 +30,8 @@ func MetricsRouter(
 	r := chi.NewRouter()
 	r.Use(srv.HTTPLoggingMiddleware)
 	r.Use(srv.GzipMiddleware)
+
+	r.Mount("/debug", middleware.Profiler())
 
 	if config.Key != "" {
 		r.Use(srv.HashCheckMiddleware)

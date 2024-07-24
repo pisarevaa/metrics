@@ -12,6 +12,7 @@ type compressWriter struct {
 	zw *gzip.Writer
 }
 
+// Сжатие данных перед отправкой.
 func newCompressWriter(w http.ResponseWriter) *compressWriter {
 	return &compressWriter{
 		w:  w,
@@ -43,6 +44,7 @@ type compressReader struct {
 	zr *gzip.Reader
 }
 
+// Расжатие данных при получении.
 func newCompressReader(r io.ReadCloser) (*compressReader, error) {
 	zr, err := gzip.NewReader(r)
 	if err != nil {
@@ -66,6 +68,7 @@ func (c *compressReader) Close() error {
 	return c.zr.Close()
 }
 
+// Мидллвар по сжати и расжатию данных.
 func (s *Handler) GzipMiddleware(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ow := w
