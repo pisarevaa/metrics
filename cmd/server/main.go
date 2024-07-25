@@ -11,12 +11,31 @@ import (
 	_ "net/http/pprof" //nolint:gosec // profiling agent
 )
 
+var buildVersion string //nolint:gochecknoglobals // new for task
+var buildDate string    //nolint:gochecknoglobals // new for task
+var buildCommit string  //nolint:gochecknoglobals // new for task
+
 const readTimeout = 5
 const writeTimout = 10
+const na = "N/A"
 
 func main() {
 	config := server.GetConfig()
 	logger := server.GetLogger()
+
+	if buildVersion == "" {
+		buildVersion = na
+	}
+	if buildDate == "" {
+		buildDate = na
+	}
+	if buildCommit == "" {
+		buildCommit = na
+	}
+	logger.Info("Build version: ", buildVersion)
+	logger.Info("Build date: ", buildDate)
+	logger.Info("Build commit: ", buildCommit)
+
 	var repo storage.Storage
 	if config.DatabaseDSN == "" {
 		repo = storage.NewMemStorage()
