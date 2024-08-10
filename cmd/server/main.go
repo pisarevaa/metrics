@@ -7,9 +7,12 @@ import (
 
 	"github.com/pisarevaa/metrics/internal/server"
 	"github.com/pisarevaa/metrics/internal/server/storage"
+	"github.com/pisarevaa/metrics/internal/server/utils"
 
 	_ "net/http/pprof" //nolint:gosec // profiling agent
 )
+
+var buildVersion, buildDate, buildCommit string //nolint:gochecknoglobals // new for task
 
 const readTimeout = 5
 const writeTimout = 10
@@ -17,6 +20,14 @@ const writeTimout = 10
 func main() {
 	config := server.GetConfig()
 	logger := server.GetLogger()
+
+	utils.SetDefaultBuildInfo(&buildVersion)
+	utils.SetDefaultBuildInfo(&buildDate)
+	utils.SetDefaultBuildInfo(&buildCommit)
+	logger.Info("Build version: ", buildVersion)
+	logger.Info("Build date: ", buildDate)
+	logger.Info("Build commit: ", buildCommit)
+
 	var repo storage.Storage
 	if config.DatabaseDSN == "" {
 		repo = storage.NewMemStorage()

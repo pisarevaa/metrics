@@ -16,6 +16,8 @@ import (
 	_ "net/http/pprof" //nolint:gosec // profiling agent
 )
 
+var buildVersion, buildDate, buildCommit string //nolint:gochecknoglobals // new for task
+
 const processes = 3 // количество гоурутин
 const readTimeout = 5
 const writeTimout = 10
@@ -30,6 +32,13 @@ func main() {
 	client := agent.NewClient()
 	logger := agent.GetLogger()
 	storage := agent.NewMemStorageRepo()
+
+	utils.SetDefaultBuildInfo(&buildVersion)
+	utils.SetDefaultBuildInfo(&buildDate)
+	utils.SetDefaultBuildInfo(&buildCommit)
+	logger.Info("Build version: ", buildVersion)
+	logger.Info("Build date: ", buildDate)
+	logger.Info("Build commit: ", buildCommit)
 
 	semaphore := utils.NewSemaphore(config.RateLimit)
 	service := agent.NewService(client, storage, config, logger, semaphore)

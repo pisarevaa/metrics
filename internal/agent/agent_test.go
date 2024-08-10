@@ -26,6 +26,7 @@ func (suite *AgentTestSuite) SetupSuite() {
 	suite.semaphore = utils.NewSemaphore(suite.config.RateLimit)
 }
 
+// Тестирование обновления runtime метрик.
 func (suite *AgentTestSuite) TestUpdateRuntimeMetrics() {
 	storage := agent.NewMemStorageRepo()
 	service := agent.NewService(suite.client, storage, suite.config, suite.logger, suite.semaphore)
@@ -51,6 +52,7 @@ func (suite *AgentTestSuite) TestUpdateRuntimeMetrics() {
 	suite.Require().Equal("2", pollCounterSecond)
 }
 
+// Тестирование отправки метрик.
 func (suite *AgentTestSuite) TestSendMetrics() {
 	storage := agent.NewMemStorageRepo()
 	service := agent.NewService(suite.client, storage, suite.config, suite.logger, suite.semaphore)

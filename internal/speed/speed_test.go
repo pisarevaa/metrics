@@ -34,6 +34,7 @@ func testRequest(suite *ServerTestSuite, ts *httptest.Server, method, url, body 
 	return resp
 }
 
+// Тест скорости обновления метрик.
 func BenchmarkUpdateMetric(b *testing.B) {
 	s := new(ServerTestSuite)
 	s.SetT(&testing.T{})
@@ -58,6 +59,7 @@ func BenchmarkUpdateMetric(b *testing.B) {
 	}
 }
 
+// Тест скорости получение данных по метрике.
 func BenchmarkGetMetric(b *testing.B) {
 	s := new(ServerTestSuite)
 	s.SetT(&testing.T{})

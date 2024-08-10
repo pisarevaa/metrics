@@ -85,6 +85,7 @@ func testRequestWithGZIP(
 	return resp, string(respBody)
 }
 
+// Тестирование обновления и получения метрик.
 func (suite *ServerTestSuite) TestServerUpdateAndGetMetrics() {
 	repo := storage.NewMemStorage()
 	ts := httptest.NewServer(server.MetricsRouter(suite.config, suite.logger, repo))
@@ -201,6 +202,7 @@ func (suite *ServerTestSuite) TestServerUpdateAndGetMetrics() {
 	}
 }
 
+// Тестирование обновления и получения метрик в формате JSON.
 func (suite *ServerTestSuite) TestServerUpdateAndGetMetricsJSON() {
 	repo := storage.NewMemStorage()
 	ts := httptest.NewServer(server.MetricsRouter(suite.config, suite.logger, repo))
@@ -309,6 +311,7 @@ func (suite *ServerTestSuite) TestServerUpdateAndGetMetricsJSON() {
 	}
 }
 
+// Тестирование обновления и получения метрик в формате JSON и с сжатием GZIP.
 func (suite *ServerTestSuite) TestServerUpdateAndGetMetricsWithGZIP() {
 	repo := storage.NewMemStorage()
 	ts := httptest.NewServer(server.MetricsRouter(suite.config, suite.logger, repo))
@@ -420,6 +423,7 @@ func (suite *ServerTestSuite) TestServerUpdateAndGetMetricsWithGZIP() {
 	}
 }
 
+// Тестирование пинга БД.
 func (suite *ServerTestSuite) TestPing() {
 	ctrl := gomock.NewController(suite.T())
 	defer ctrl.Finish()
@@ -438,6 +442,7 @@ func (suite *ServerTestSuite) TestPing() {
 	suite.Require().Equal(200, resp.StatusCode)
 }
 
+// Тестирование массового обновления и получения метрик в формате JSON.
 func (suite *ServerTestSuite) TestServerUpdateAndGetMetricsJSONBatch() {
 	ctrl := gomock.NewController(suite.T())
 	defer ctrl.Finish()
