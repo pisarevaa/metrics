@@ -9,7 +9,7 @@ import (
 // Напишите и добавьте в multichecker собственный анализатор, запрещающий использовать
 // прямой вызов os.Exit в функции main пакета main. При необходимости перепишите код
 // своего проекта так, чтобы он удовлетворял данному анализатору.
-var ErrCheckAnalyzer = &analysis.Analyzer{
+var OSExitInMainAnalyzer = &analysis.Analyzer{ //nolint:gochecknoglobals // new for task
 	Name: "osexitmain",
 	Doc:  "check for os.Exit in main.go",
 	Run:  run,
