@@ -5,6 +5,8 @@ import (
 	"log"
 
 	"github.com/caarlos0/env/v6"
+
+	"github.com/pisarevaa/metrics/internal/server/utils"
 )
 
 type Config struct {
@@ -14,6 +16,7 @@ type Config struct {
 	Restore         bool   `env:"RESTORE"`
 	DatabaseDSN     string `env:"DATABASE_DSN"`
 	Key             string `env:"KEY"`
+	CryptoKey       string `env:"CRYPTO_KEY"`
 }
 
 // Получение конфигурации агента.
@@ -26,6 +29,7 @@ func GetConfig() Config {
 	flag.BoolVar(&config.Restore, "r", true, "retore previous metrics data")
 	flag.StringVar(&config.DatabaseDSN, "d", "", "database dsn")
 	flag.StringVar(&config.Key, "k", "", "Key for hashing")
+	flag.StringVar(&config.CryptoKey, "crypto-key", "metrics_private.key", "path to private key")
 	flag.Parse()
 	if len(flag.Args()) > 0 {
 		log.Fatal("used not declared arguments")
@@ -54,6 +58,15 @@ func GetConfig() Config {
 	}
 	if envConfig.Key != "" {
 		config.Key = envConfig.Key
+	}
+	if envConfig.CryptoKey != "" {
+		config.CryptoKey = envConfig.CryptoKey
+	}
+	if config.CryptoKey != "" {
+		err = utils.InitPrivateKey(config.CryptoKey)
+		if err != nil {
+			log.Fatal(err)
+		}
 	}
 
 	return config

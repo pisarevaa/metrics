@@ -14,6 +14,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/pisarevaa/metrics/internal/server/storage"
+	"github.com/pisarevaa/metrics/internal/server/utils"
 )
 
 type Handler struct {
@@ -116,7 +117,16 @@ func (s *Handler) StoreMetricsJSON(w http.ResponseWriter, r *http.Request) { //n
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	if err = json.Unmarshal(buf.Bytes(), &metric); err != nil {
+	body := buf.Bytes()
+	if s.Config.CryptoKey != "" {
+		body, err = utils.DecryptString(body)
+		if err != nil {
+			s.Logger.Error(err)
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+	}
+	if err = json.Unmarshal(body, &metric); err != nil {
 		s.Logger.Error(err)
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -193,7 +203,16 @@ func (s *Handler) StoreMetricsJSONBatches(w http.ResponseWriter, r *http.Request
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	if err = json.Unmarshal(buf.Bytes(), &metrics); err != nil {
+	body := buf.Bytes()
+	if s.Config.CryptoKey != "" {
+		body, err = utils.DecryptString(body)
+		if err != nil {
+			s.Logger.Error(err)
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+	}
+	if err = json.Unmarshal(body, &metrics); err != nil {
 		s.Logger.Error(err)
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return

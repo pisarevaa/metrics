@@ -5,6 +5,8 @@ import (
 	"log"
 
 	"github.com/caarlos0/env/v6"
+
+	"github.com/pisarevaa/metrics/internal/agent/utils"
 )
 
 type Config struct {
@@ -13,6 +15,7 @@ type Config struct {
 	ReportInterval int    `env:"POLL_INTERVAL"`
 	Key            string `env:"KEY"`
 	RateLimit      int    `env:"RATE_LIMIT"`
+	CryptoKey      string `env:"CRYPTO_KEY"`
 }
 
 // Получение конфигурации агента.
@@ -24,6 +27,7 @@ func GetConfig() Config {
 	flag.IntVar(&config.ReportInterval, "r", 10, "frequency of polling metrics from the runtime package")
 	flag.StringVar(&config.Key, "k", "", "Key for hashing")
 	flag.IntVar(&config.RateLimit, "l", 20, "Rate limit to send HTTP requests")
+	flag.StringVar(&config.CryptoKey, "crypto-key", "metrics_public.key", "path to public key")
 
 	flag.Parse()
 	if len(flag.Args()) > 0 {
@@ -49,6 +53,15 @@ func GetConfig() Config {
 	}
 	if envConfig.RateLimit != 0 {
 		config.RateLimit = envConfig.RateLimit
+	}
+	if envConfig.CryptoKey != "" {
+		config.CryptoKey = envConfig.CryptoKey
+	}
+	if config.CryptoKey != "" {
+		err = utils.InitPublicKey(config.CryptoKey)
+		if err != nil {
+			log.Fatal(err)
+		}
 	}
 
 	return config
