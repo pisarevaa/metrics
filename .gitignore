@@ -13,6 +13,7 @@
 *.html
 *.key
 *.crt
+*_env.json
 
 # Binaries
 cmd/agent/main
