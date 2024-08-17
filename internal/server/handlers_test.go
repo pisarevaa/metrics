@@ -3,6 +3,7 @@ package server_test
 import (
 	"bytes"
 	"compress/gzip"
+	"context"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -88,7 +89,7 @@ func testRequestWithGZIP(
 // Тестирование обновления и получения метрик.
 func (suite *ServerTestSuite) TestServerUpdateAndGetMetrics() {
 	repo := storage.NewMemStorage()
-	ts := httptest.NewServer(server.MetricsRouter(suite.config, suite.logger, repo))
+	ts := httptest.NewServer(server.MetricsRouter(context.Background(), suite.config, suite.logger, repo))
 	defer ts.Close()
 
 	type want struct {
@@ -205,7 +206,7 @@ func (suite *ServerTestSuite) TestServerUpdateAndGetMetrics() {
 // Тестирование обновления и получения метрик в формате JSON.
 func (suite *ServerTestSuite) TestServerUpdateAndGetMetricsJSON() {
 	repo := storage.NewMemStorage()
-	ts := httptest.NewServer(server.MetricsRouter(suite.config, suite.logger, repo))
+	ts := httptest.NewServer(server.MetricsRouter(context.Background(), suite.config, suite.logger, repo))
 	defer ts.Close()
 
 	type want struct {
@@ -314,7 +315,7 @@ func (suite *ServerTestSuite) TestServerUpdateAndGetMetricsJSON() {
 // Тестирование обновления и получения метрик в формате JSON и с сжатием GZIP.
 func (suite *ServerTestSuite) TestServerUpdateAndGetMetricsWithGZIP() {
 	repo := storage.NewMemStorage()
-	ts := httptest.NewServer(server.MetricsRouter(suite.config, suite.logger, repo))
+	ts := httptest.NewServer(server.MetricsRouter(context.Background(), suite.config, suite.logger, repo))
 	defer ts.Close()
 
 	type want struct {
@@ -434,7 +435,7 @@ func (suite *ServerTestSuite) TestPing() {
 		Ping(gomock.Any()).
 		Return(nil)
 
-	ts := httptest.NewServer(server.MetricsRouter(suite.config, suite.logger, m))
+	ts := httptest.NewServer(server.MetricsRouter(context.Background(), suite.config, suite.logger, m))
 	defer ts.Close()
 
 	resp, _ := testRequest(suite, ts, "GET", "/ping", "")
@@ -453,7 +454,7 @@ func (suite *ServerTestSuite) TestServerUpdateAndGetMetricsJSONBatch() {
 		StoreMetrics(gomock.Any(), gomock.Any()).
 		Return(nil)
 
-	ts := httptest.NewServer(server.MetricsRouter(suite.config, suite.logger, m))
+	ts := httptest.NewServer(server.MetricsRouter(context.Background(), suite.config, suite.logger, m))
 	defer ts.Close()
 
 	resp, _ := testRequest(suite, ts, "POST", "/updates/", `[{"id": "HeapAlloc", "type": "gauge", "value": 1.25}]`)

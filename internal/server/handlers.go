@@ -380,12 +380,18 @@ func (s *Handler) GetAllMetrics(w http.ResponseWriter, r *http.Request) {
 }
 
 // Запуск таски записи на диск.
-func (s *Handler) RunTaskSaveToDisk() {
+func (s *Handler) RunTaskSaveToDisk(ctx context.Context) {
 	ticker := time.NewTicker(time.Duration(s.Config.StoreInterval) * time.Second)
 	defer ticker.Stop()
 	stop := make(chan bool, 1)
 	for {
 		select {
+		case <-ctx.Done():
+			stop <- true
+			s.Logger.Error("ctx.Done -> exit RunTaskSaveToDisk")
+			return
+		case <-stop:
+			return
 		case <-ticker.C:
 			metrics, err := s.Storage.GetAllMetrics(context.Background())
 			if err != nil {
@@ -398,8 +404,6 @@ func (s *Handler) RunTaskSaveToDisk() {
 				stop <- true
 			}
 			s.Logger.Info("success save metrics to disk")
-		case <-stop:
-			return
 		}
 	}
 }

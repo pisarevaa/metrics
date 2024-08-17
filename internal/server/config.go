@@ -57,14 +57,14 @@ func getFromJSONFile(config *Config) error {
 func GetConfig() Config {
 	var config Config
 
-	flag.StringVar(&config.Host, "a", "localhost:8080", "address and port to run server")
+	flag.StringVar(&config.Host, "a", "localhost:8086", "address and port to run server")
 	flag.IntVar(&config.StoreInterval, "i", 300, "interval in sec to store metrics")
 	flag.StringVar(&config.FileStoragePath, "f", "/tmp/metrics-db.json", "path to save metrics")
 	flag.BoolVar(&config.Restore, "r", true, "retore previous metrics data")
 	flag.StringVar(&config.DatabaseDSN, "d", "", "database dsn")
 	flag.StringVar(&config.Key, "k", "", "Key for hashing")
 	flag.StringVar(&config.CryptoKey, "crypto-key", "", "path to private key")
-	flag.StringVar(&config.Config, "c", "server_env.json", "path to config JSON file")
+	flag.StringVar(&config.Config, "c", "", "path to config JSON file")
 	flag.Parse()
 	if len(flag.Args()) > 0 {
 		log.Fatal("used not declared arguments")

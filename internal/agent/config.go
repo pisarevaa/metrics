@@ -56,7 +56,7 @@ func GetConfig() Config {
 	flag.StringVar(&config.Key, "k", "", "Key for hashing")
 	flag.IntVar(&config.RateLimit, "l", 20, "Rate limit to send HTTP requests")
 	flag.StringVar(&config.CryptoKey, "crypto-key", "", "path to public key")
-	flag.StringVar(&config.Config, "c", "agent_env.json", "path to config JSON file")
+	flag.StringVar(&config.Config, "c", "", "path to config JSON file")
 	flag.Parse()
 	if len(flag.Args()) > 0 {
 		log.Fatal("used not declared arguments")
