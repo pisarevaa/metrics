@@ -119,7 +119,7 @@ func (s *Handler) StoreMetricsJSON(w http.ResponseWriter, r *http.Request) { //n
 	}
 	body := buf.Bytes()
 	if s.Config.CryptoKey != "" {
-		body, err = utils.DecryptString(body)
+		body, err = utils.DecryptString(s.Config.PrivateKey, body)
 		if err != nil {
 			s.Logger.Error(err)
 			http.Error(w, err.Error(), http.StatusBadRequest)
@@ -205,7 +205,7 @@ func (s *Handler) StoreMetricsJSONBatches(w http.ResponseWriter, r *http.Request
 	}
 	body := buf.Bytes()
 	if s.Config.CryptoKey != "" {
-		body, err = utils.DecryptString(body)
+		body, err = utils.DecryptString(s.Config.PrivateKey, body)
 		if err != nil {
 			s.Logger.Error(err)
 			http.Error(w, err.Error(), http.StatusBadRequest)

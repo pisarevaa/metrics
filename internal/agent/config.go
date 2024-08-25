@@ -1,6 +1,7 @@
 package agent
 
 import (
+	"crypto/rsa"
 	"encoding/json"
 	"flag"
 	"log"
@@ -12,13 +13,14 @@ import (
 )
 
 type Config struct {
-	Host           string `env:"ADDRESS"         json:"address"`
-	PollInterval   int    `env:"REPORT_INTERVAL" json:"poll_interval"`
-	ReportInterval int    `env:"POLL_INTERVAL"   json:"report_interval"`
-	Key            string `env:"KEY"             json:"key,omitempty"`
-	RateLimit      int    `env:"RATE_LIMIT"      json:"rate_limit,omitempty"`
-	CryptoKey      string `env:"CRYPTO_KEY"      json:"crypto_key"`
-	Config         string `env:"CONFIG"          json:"config,omitempty"`
+	Host           string         `env:"ADDRESS"         json:"address"`
+	PollInterval   int            `env:"REPORT_INTERVAL" json:"poll_interval"`
+	ReportInterval int            `env:"POLL_INTERVAL"   json:"report_interval"`
+	Key            string         `env:"KEY"             json:"key,omitempty"`
+	RateLimit      int            `env:"RATE_LIMIT"      json:"rate_limit,omitempty"`
+	CryptoKey      string         `env:"CRYPTO_KEY"      json:"crypto_key"`
+	Config         string         `env:"CONFIG"          json:"config,omitempty"`
+	PublicKey      *rsa.PublicKey `env:"PUBLIC_KEY"      json:"public_key,omitempty"`
 }
 
 func getFromJSONFile(config *Config) error {
@@ -97,11 +99,13 @@ func GetConfig() Config {
 			log.Fatal(err)
 		}
 	}
-
 	if config.CryptoKey != "" {
-		err = utils.InitPublicKey(config.CryptoKey)
-		if err != nil {
-			log.Fatal(err)
+		publicKey, errCryptoKey := utils.InitPublicKey(config.CryptoKey)
+		if errCryptoKey != nil {
+			log.Fatal(errCryptoKey)
+		}
+		if publicKey != nil {
+			config.PublicKey = publicKey
 		}
 	}
 

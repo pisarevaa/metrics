@@ -5,33 +5,31 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"encoding/pem"
+	"errors"
 	"os"
 )
 
-var publicKey *rsa.PublicKey //nolint:gochecknoglobals // new for task
-
-// const STEP = 400
-
-func InitPublicKey(filePath string) error {
+func InitPublicKey(filePath string) (*rsa.PublicKey, error) {
 	publicKeyPEM, err := os.ReadFile(filePath)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 	publicKeyBlock, _ := pem.Decode(publicKeyPEM)
 	key, err := x509.ParsePKIXPublicKey(publicKeyBlock.Bytes)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
+	var publicKey *rsa.PublicKey
 	switch v := key.(type) {
-	default:
-		panic("unexpected key type")
 	case *rsa.PublicKey:
 		publicKey = v
+	default:
+		return nil, errors.New("unexpected key type")
 	}
-	return nil
+	return publicKey, nil
 }
 
-func EncryptString(plaintext []byte) ([]byte, error) {
+func EncryptString(publicKey *rsa.PublicKey, plaintext []byte) ([]byte, error) {
 	msgLen := len(plaintext)
 	// Не понял пока как подобрать число чтобы не было ошибки crypto/rsa: message too long for RSA key size.
 	step := publicKey.Size() - 15 //nolint:gomnd // не понял пока как подобрать число

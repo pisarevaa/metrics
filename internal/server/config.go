@@ -1,6 +1,7 @@
 package server
 
 import (
+	"crypto/rsa"
 	"encoding/json"
 	"flag"
 	"log"
@@ -12,14 +13,15 @@ import (
 )
 
 type Config struct {
-	Host            string `env:"ADDRESS"           json:"address"`
-	StoreInterval   int    `env:"STORE_INTERVAL"    json:"store_interval"`
-	FileStoragePath string `env:"FILE_STORAGE_PATH" json:"store_file"`
-	Restore         bool   `env:"RESTORE"           json:"restore"`
-	DatabaseDSN     string `env:"DATABASE_DSN"      json:"database_dsn"`
-	Key             string `env:"KEY"               json:"key,omitempty"`
-	CryptoKey       string `env:"CRYPTO_KEY"        json:"crypto_key"`
-	Config          string `env:"CONFIG"            json:"config,omitempty"`
+	Host            string          `env:"ADDRESS"           json:"address"`
+	StoreInterval   int             `env:"STORE_INTERVAL"    json:"store_interval"`
+	FileStoragePath string          `env:"FILE_STORAGE_PATH" json:"store_file"`
+	Restore         bool            `env:"RESTORE"           json:"restore"`
+	DatabaseDSN     string          `env:"DATABASE_DSN"      json:"database_dsn"`
+	Key             string          `env:"KEY"               json:"key,omitempty"`
+	CryptoKey       string          `env:"CRYPTO_KEY"        json:"crypto_key"`
+	Config          string          `env:"CONFIG"            json:"config,omitempty"`
+	PrivateKey      *rsa.PrivateKey `env:"PRIVATE_KEY"       json:"private_key,omitempty"`
 }
 
 func getFromJSONFile(config *Config) error {
@@ -57,7 +59,7 @@ func getFromJSONFile(config *Config) error {
 func GetConfig() Config {
 	var config Config
 
-	flag.StringVar(&config.Host, "a", "localhost:8086", "address and port to run server")
+	flag.StringVar(&config.Host, "a", "localhost:8080", "address and port to run server")
 	flag.IntVar(&config.StoreInterval, "i", 300, "interval in sec to store metrics")
 	flag.StringVar(&config.FileStoragePath, "f", "/tmp/metrics-db.json", "path to save metrics")
 	flag.BoolVar(&config.Restore, "r", true, "retore previous metrics data")
@@ -110,10 +112,11 @@ func GetConfig() Config {
 	}
 
 	if config.CryptoKey != "" {
-		err = utils.InitPrivateKey(config.CryptoKey)
-		if err != nil {
-			log.Fatal(err)
+		privateKey, errCryptoKey := utils.InitPrivateKey(config.CryptoKey)
+		if errCryptoKey != nil {
+			log.Fatal(errCryptoKey)
 		}
+		config.PrivateKey = privateKey
 	}
 
 	return config
