@@ -3,9 +3,9 @@ package main
 
 import (
 	"context"
-	"os"
 	"os/signal"
 	"sync"
+	"syscall"
 	"time"
 
 	"net/http"
@@ -23,9 +23,9 @@ const readTimeout = 5
 const writeTimout = 10
 
 func main() {
-	ctx, cancel := context.WithCancel(context.Background())
+	ctxCancel, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	ctx, stop := signal.NotifyContext(ctx, os.Interrupt)
+	ctxStop, stop := signal.NotifyContext(ctxCancel, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
 	defer stop()
 
 	config := agent.GetConfig()
@@ -52,16 +52,16 @@ func main() {
 	go func() {
 		err := httpServer.ListenAndServe()
 		if err != nil {
-			_ = httpServer.Shutdown(context.Background())
+			_ = httpServer.Shutdown(ctxStop)
 		}
 	}()
 
 	var wg sync.WaitGroup
 	wg.Add(processes)
 	logger.Info("Client is running...")
-	go service.RunUpdateRuntimeMetrics(ctx, &wg)
-	go service.RunUpdateGopsutilMetrics(ctx, &wg)
-	go service.RunSendMetrics(ctx, &wg)
+	go service.RunUpdateRuntimeMetrics(ctxStop, &wg)
+	go service.RunUpdateGopsutilMetrics(ctxStop, &wg)
+	go service.RunSendMetrics(ctxStop, &wg)
 	wg.Wait()
 
 	logger.Error("exit programm")

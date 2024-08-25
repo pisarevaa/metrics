@@ -14,6 +14,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/pisarevaa/metrics/internal/server/storage"
+	"github.com/pisarevaa/metrics/internal/server/utils"
 )
 
 type Handler struct {
@@ -116,7 +117,16 @@ func (s *Handler) StoreMetricsJSON(w http.ResponseWriter, r *http.Request) { //n
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	if err = json.Unmarshal(buf.Bytes(), &metric); err != nil {
+	body := buf.Bytes()
+	if s.Config.CryptoKey != "" {
+		body, err = utils.DecryptString(s.Config.PrivateKey, body)
+		if err != nil {
+			s.Logger.Error(err)
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+	}
+	if err = json.Unmarshal(body, &metric); err != nil {
 		s.Logger.Error(err)
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -193,7 +203,16 @@ func (s *Handler) StoreMetricsJSONBatches(w http.ResponseWriter, r *http.Request
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	if err = json.Unmarshal(buf.Bytes(), &metrics); err != nil {
+	body := buf.Bytes()
+	if s.Config.CryptoKey != "" {
+		body, err = utils.DecryptString(s.Config.PrivateKey, body)
+		if err != nil {
+			s.Logger.Error(err)
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+	}
+	if err = json.Unmarshal(body, &metrics); err != nil {
 		s.Logger.Error(err)
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -361,12 +380,18 @@ func (s *Handler) GetAllMetrics(w http.ResponseWriter, r *http.Request) {
 }
 
 // Запуск таски записи на диск.
-func (s *Handler) RunTaskSaveToDisk() {
+func (s *Handler) RunTaskSaveToDisk(ctx context.Context) {
 	ticker := time.NewTicker(time.Duration(s.Config.StoreInterval) * time.Second)
 	defer ticker.Stop()
 	stop := make(chan bool, 1)
 	for {
 		select {
+		case <-ctx.Done():
+			stop <- true
+			s.Logger.Error("ctx.Done -> exit RunTaskSaveToDisk")
+			return
+		case <-stop:
+			return
 		case <-ticker.C:
 			metrics, err := s.Storage.GetAllMetrics(context.Background())
 			if err != nil {
@@ -379,8 +404,6 @@ func (s *Handler) RunTaskSaveToDisk() {
 				stop <- true
 			}
 			s.Logger.Info("success save metrics to disk")
-		case <-stop:
-			return
 		}
 	}
 }

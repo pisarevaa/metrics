@@ -36,6 +36,9 @@ mock_generate:
 doc_generate:
 	godoc -http=:8080
 
+generate_keys:
+	go run ./cmd/generate_keys
+
 lint:
 	go fmt ./...
 	find . -name '*.go' -exec goimports -local github.com/pisarevaa/metrics -w {} +

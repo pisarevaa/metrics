@@ -3,6 +3,7 @@ package speed_test
 
 import (
 	"bytes"
+	"context"
 
 	"net/http"
 	"net/http/httptest"
@@ -45,7 +46,7 @@ func BenchmarkUpdateMetric(b *testing.B) {
 	}
 	s.logger = server.GetLogger()
 	repo := storage.NewMemStorage()
-	ts := httptest.NewServer(server.MetricsRouter(s.config, s.logger, repo))
+	ts := httptest.NewServer(server.MetricsRouter(context.Background(), s.config, s.logger, repo))
 	defer ts.Close()
 
 	b.ResetTimer()
@@ -70,7 +71,7 @@ func BenchmarkGetMetric(b *testing.B) {
 	}
 	s.logger = server.GetLogger()
 	repo := storage.NewMemStorage()
-	ts := httptest.NewServer(server.MetricsRouter(s.config, s.logger, repo))
+	ts := httptest.NewServer(server.MetricsRouter(context.Background(), s.config, s.logger, repo))
 	defer ts.Close()
 
 	resp := testRequest(s, ts, "POST", "/updates/", `[{"id": "HeapAlloc", "type": "counter", "value": 2}]`)

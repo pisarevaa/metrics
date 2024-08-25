@@ -2,7 +2,10 @@
 package main
 
 import (
+	"context"
 	"net/http"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/pisarevaa/metrics/internal/server"
@@ -15,9 +18,15 @@ import (
 var buildVersion, buildDate, buildCommit string //nolint:gochecknoglobals // new for task
 
 const readTimeout = 5
-const writeTimout = 10
+const writeTimeout = 10
+const shutdownTimeout = 10
 
 func main() {
+	ctxCancel, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	ctxStop, stop := signal.NotifyContext(ctxCancel, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
+	defer stop()
+
 	config := server.GetConfig()
 	logger := server.GetLogger()
 
@@ -38,9 +47,21 @@ func main() {
 	logger.Info("Server is running on ", config.Host)
 	srv := &http.Server{
 		Addr:         config.Host,
-		Handler:      server.MetricsRouter(config, logger, repo),
+		Handler:      server.MetricsRouter(ctxStop, config, logger, repo),
 		ReadTimeout:  readTimeout * time.Second,
-		WriteTimeout: writeTimout * time.Second,
+		WriteTimeout: writeTimeout * time.Second,
 	}
-	logger.Fatal(srv.ListenAndServe())
+	go func() {
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			logger.Info("Could not listen on ", config.Host)
+		}
+	}()
+	<-ctxStop.Done()
+	shutdownCtx, timeout := context.WithTimeout(ctxStop, shutdownTimeout*time.Second)
+	defer timeout()
+	err := srv.Shutdown(shutdownCtx)
+	if err != nil {
+		logger.Error(err)
+	}
+	logger.Info("Server is gracefully shutdown")
 }

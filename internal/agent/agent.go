@@ -205,6 +205,13 @@ func (s *Service) makeHTTPRequest(metrics []Metrics) {
 		s.Logger.Error(err)
 		return
 	}
+	if s.Config.CryptoKey != "" {
+		payloadString, err = utils.EncryptString(s.Config.PublicKey, payloadString)
+		if err != nil {
+			s.Logger.Error(err)
+			return
+		}
+	}
 	_, err = zb.Write(payloadString)
 	if err != nil {
 		s.Logger.Error(err)

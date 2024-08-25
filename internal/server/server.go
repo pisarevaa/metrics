@@ -12,6 +12,7 @@ import (
 
 // Создание роутера.
 func MetricsRouter(
+	ctx context.Context,
 	config Config,
 	logger *zap.SugaredLogger,
 	repo storage.Storage,
@@ -21,7 +22,7 @@ func MetricsRouter(
 		if err != nil {
 			logger.Error(err)
 		}
-		err = repo.StoreMetrics(context.Background(), metrics)
+		err = repo.StoreMetrics(ctx, metrics)
 		if err != nil {
 			logger.Error(err)
 		}
@@ -46,7 +47,7 @@ func MetricsRouter(
 
 	if config.StoreInterval > 0 {
 		logger.Info("Running background tasks...")
-		go srv.RunTaskSaveToDisk()
+		go srv.RunTaskSaveToDisk(ctx)
 	}
 
 	return r
