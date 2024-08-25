@@ -18,7 +18,8 @@ import (
 var buildVersion, buildDate, buildCommit string //nolint:gochecknoglobals // new for task
 
 const readTimeout = 5
-const writeTimout = 10
+const writeTimeout = 10
+const shutdownTimeout = 10
 
 func main() {
 	ctxCancel, cancel := context.WithCancel(context.Background())
@@ -48,7 +49,7 @@ func main() {
 		Addr:         config.Host,
 		Handler:      server.MetricsRouter(ctxStop, config, logger, repo),
 		ReadTimeout:  readTimeout * time.Second,
-		WriteTimeout: writeTimout * time.Second,
+		WriteTimeout: writeTimeout * time.Second,
 	}
 	go func() {
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
@@ -56,7 +57,9 @@ func main() {
 		}
 	}()
 	<-ctxStop.Done()
-	err := srv.Shutdown(ctxStop)
+	shutdownCtx, timeout := context.WithTimeout(ctxStop, shutdownTimeout*time.Second)
+	defer timeout()
+	err := srv.Shutdown(shutdownCtx)
 	if err != nil {
 		logger.Error(err)
 	}
