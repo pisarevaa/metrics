@@ -22,6 +22,7 @@ type Config struct {
 	CryptoKey       string          `env:"CRYPTO_KEY"        json:"crypto_key"`
 	Config          string          `env:"CONFIG"            json:"config,omitempty"`
 	PrivateKey      *rsa.PrivateKey `env:"PRIVATE_KEY"       json:"private_key,omitempty"`
+	TrustedSubnet   string          `env:"TRUSTED_SUBNET"    json:"trusted_subnet,omitempty"`
 }
 
 func getFromJSONFile(config *Config) error {
@@ -52,6 +53,9 @@ func getFromJSONFile(config *Config) error {
 	if config.CryptoKey == "" && fileConfig.CryptoKey != "" {
 		config.CryptoKey = fileConfig.CryptoKey
 	}
+	if config.TrustedSubnet == "" && fileConfig.TrustedSubnet != "" {
+		config.TrustedSubnet = fileConfig.TrustedSubnet
+	}
 	return nil
 }
 
@@ -67,6 +71,7 @@ func GetConfig() Config {
 	flag.StringVar(&config.Key, "k", "", "Key for hashing")
 	flag.StringVar(&config.CryptoKey, "crypto-key", "", "path to private key")
 	flag.StringVar(&config.Config, "c", "", "path to config JSON file")
+	flag.StringVar(&config.TrustedSubnet, "t", "", "trusted agent subnet")
 	flag.Parse()
 	if len(flag.Args()) > 0 {
 		log.Fatal("used not declared arguments")
@@ -102,6 +107,9 @@ func GetConfig() Config {
 	}
 	if envConfig.CryptoKey != "" {
 		config.CryptoKey = envConfig.CryptoKey
+	}
+	if envConfig.TrustedSubnet != "" {
+		config.TrustedSubnet = envConfig.TrustedSubnet
 	}
 
 	if config.Config != "" {

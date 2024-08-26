@@ -222,9 +222,16 @@ func (s *Service) makeHTTPRequest(metrics []Metrics) {
 		s.Logger.Error(err)
 		return
 	}
+	ip, err := utils.GetOutboundIP()
+	if err != nil {
+		s.Logger.Error(err)
+		return
+	}
+
 	r := s.Client.R().
 		SetHeader("Content-Type", "application/json").
 		SetHeader("Content-Encoding", "gzip").
+		SetHeader("X-Real-IP", ip).
 		SetBody(buf)
 	if s.Config.Key != "" {
 		hash, errHash := utils.GetBodyHash(payloadString, s.Config.Key)
