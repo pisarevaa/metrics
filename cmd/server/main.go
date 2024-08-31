@@ -58,7 +58,6 @@ func main() {
 	}
 
 	var grpcServer *grpc.Server
-	logger.Info("config.GrpcActive", config.GrpcActive)
 	if config.GrpcActive {
 		listen, err := net.Listen("tcp", ":"+config.GrpcPort)
 		if err != nil {
