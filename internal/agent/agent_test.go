@@ -13,23 +13,26 @@ import (
 
 type AgentTestSuite struct {
 	suite.Suite
-	client    *resty.Client
-	config    agent.Config
-	logger    *zap.SugaredLogger
-	semaphore *utils.Semaphore
+	client     *resty.Client
+	config     agent.Config
+	logger     *zap.SugaredLogger
+	semaphore  *utils.Semaphore
+	grpcClient agent.GrpcClient
 }
 
 func (suite *AgentTestSuite) SetupSuite() {
 	suite.config = agent.GetConfig()
 	suite.logger = agent.GetLogger()
 	suite.client = resty.New()
+	var grpcClient agent.GrpcClient
+	suite.grpcClient = grpcClient
 	suite.semaphore = utils.NewSemaphore(suite.config.RateLimit)
 }
 
 // Тестирование обновления runtime метрик.
 func (suite *AgentTestSuite) TestUpdateRuntimeMetrics() {
 	storage := agent.NewMemStorageRepo()
-	service := agent.NewService(suite.client, storage, suite.config, suite.logger, suite.semaphore)
+	service := agent.NewService(suite.client, storage, suite.config, suite.logger, suite.semaphore, suite.grpcClient)
 	errFirst := service.UpdateRuntimeMetrics()
 	suite.Require().NoError(errFirst)
 	allocFirst, allocFirstErr := service.Storage.Get("gauge", "Alloc")
@@ -55,7 +58,7 @@ func (suite *AgentTestSuite) TestUpdateRuntimeMetrics() {
 // Тестирование отправки метрик.
 func (suite *AgentTestSuite) TestSendMetrics() {
 	storage := agent.NewMemStorageRepo()
-	service := agent.NewService(suite.client, storage, suite.config, suite.logger, suite.semaphore)
+	service := agent.NewService(suite.client, storage, suite.config, suite.logger, suite.semaphore, suite.grpcClient)
 	service.SendMetrics()
 	err := service.UpdateRuntimeMetrics()
 	suite.Require().NoError(err)

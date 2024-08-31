@@ -253,6 +253,15 @@ func (s *Service) SendMetrics() {
 	s.Semaphore.Acquire()
 	defer s.Semaphore.Release()
 	metrics := s.Storage.GetMetrics()
+	if s.Config.GrpcActive {
+		err := s.GrpcClient.SendMetrics(metrics)
+		if err != nil {
+			s.Logger.Error(err)
+			return
+		}
+	} else {
+		s.makeHTTPRequest(metrics)
+	}
 	s.makeHTTPRequest(metrics)
 	s.Logger.Info("Send Gauge", s.Storage.Gauge)
 	s.Logger.Info("Send Counter", s.Storage.Counter)

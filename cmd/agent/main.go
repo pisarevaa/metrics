@@ -41,7 +41,17 @@ func main() {
 	logger.Info("Build commit: ", buildCommit)
 
 	semaphore := utils.NewSemaphore(config.RateLimit)
-	service := agent.NewService(client, storage, config, logger, semaphore)
+
+	var grpcClient agent.GrpcClient
+	if config.GrpcActive {
+		grpcClient, err := agent.NewGrpcClient(config.GrpcPort)
+		if err != nil {
+			logger.Error(err)
+			return
+		}
+		defer grpcClient.Close()
+	}
+	service := agent.NewService(client, storage, config, logger, semaphore, grpcClient)
 
 	// Profiling agent http://127.0.0.1:8080/debug/pprof/
 	httpServer := &http.Server{

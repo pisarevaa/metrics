@@ -8,11 +8,12 @@ import (
 )
 
 type Service struct {
-	Client    *resty.Client      // клиент для внешних запросов
-	Storage   *MemStorage        // хранилище метрик
-	Config    Config             // параметры конфигурации
-	Logger    *zap.SugaredLogger // логер
-	Semaphore *utils.Semaphore   // семафор
+	Client     *resty.Client      // клиент для внешних запросов
+	Storage    *MemStorage        // хранилище метрик
+	Config     Config             // параметры конфигурации
+	Logger     *zap.SugaredLogger // логер
+	Semaphore  *utils.Semaphore   // семафор
+	GrpcClient GrpcClient         // GRPC client
 }
 
 // Созание нового сервиса.
@@ -22,12 +23,14 @@ func NewService(
 	config Config,
 	logger *zap.SugaredLogger,
 	semaphore *utils.Semaphore,
+	grpcClient GrpcClient,
 ) *Service {
 	return &Service{
-		Client:    client,
-		Storage:   storage,
-		Config:    config,
-		Logger:    logger,
-		Semaphore: semaphore,
+		Client:     client,
+		Storage:    storage,
+		Config:     config,
+		Logger:     logger,
+		Semaphore:  semaphore,
+		GrpcClient: grpcClient,
 	}
 }
