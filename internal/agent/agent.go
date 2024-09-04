@@ -222,9 +222,16 @@ func (s *Service) makeHTTPRequest(metrics []Metrics) {
 		s.Logger.Error(err)
 		return
 	}
+	ip, err := utils.GetOutboundIP()
+	if err != nil {
+		s.Logger.Error(err)
+		return
+	}
+
 	r := s.Client.R().
 		SetHeader("Content-Type", "application/json").
 		SetHeader("Content-Encoding", "gzip").
+		SetHeader("X-Real-IP", ip).
 		SetBody(buf)
 	if s.Config.Key != "" {
 		hash, errHash := utils.GetBodyHash(payloadString, s.Config.Key)
@@ -246,6 +253,15 @@ func (s *Service) SendMetrics() {
 	s.Semaphore.Acquire()
 	defer s.Semaphore.Release()
 	metrics := s.Storage.GetMetrics()
+	if s.Config.GrpcActive {
+		err := s.GrpcClient.SendMetrics(metrics)
+		if err != nil {
+			s.Logger.Error(err)
+			return
+		}
+	} else {
+		s.makeHTTPRequest(metrics)
+	}
 	s.makeHTTPRequest(metrics)
 	s.Logger.Info("Send Gauge", s.Storage.Gauge)
 	s.Logger.Info("Send Counter", s.Storage.Counter)

@@ -31,12 +31,15 @@ func MetricsRouter(
 	r := chi.NewRouter()
 	r.Use(srv.HTTPLoggingMiddleware)
 	r.Use(srv.GzipMiddleware)
-
-	r.Mount("/debug", middleware.Profiler())
-
 	if config.Key != "" {
 		r.Use(srv.HashCheckMiddleware)
 	}
+	if config.TrustedSubnet != "" {
+		r.Use(srv.IPCheckMiddleware)
+	}
+
+	r.Mount("/debug", middleware.Profiler())
+
 	r.Get("/ping", srv.Ping)
 	r.Post("/update/{metricType}/{metricName}/{metricValue}", srv.StoreMetrics)
 	r.Post("/update/", srv.StoreMetricsJSON)

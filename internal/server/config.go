@@ -22,6 +22,9 @@ type Config struct {
 	CryptoKey       string          `env:"CRYPTO_KEY"        json:"crypto_key"`
 	Config          string          `env:"CONFIG"            json:"config,omitempty"`
 	PrivateKey      *rsa.PrivateKey `env:"PRIVATE_KEY"       json:"private_key,omitempty"`
+	TrustedSubnet   string          `env:"TRUSTED_SUBNET"    json:"trusted_subnet,omitempty"`
+	GrpcPort        string          `env:"GRPC_PORT"         json:"grpc_port,omitempty"`
+	GrpcActive      bool            `env:"GRPC_ACTIVE"       json:"grpc_active,omitempty"`
 }
 
 func getFromJSONFile(config *Config) error {
@@ -52,6 +55,12 @@ func getFromJSONFile(config *Config) error {
 	if config.CryptoKey == "" && fileConfig.CryptoKey != "" {
 		config.CryptoKey = fileConfig.CryptoKey
 	}
+	if config.TrustedSubnet == "" && fileConfig.TrustedSubnet != "" {
+		config.TrustedSubnet = fileConfig.TrustedSubnet
+	}
+	if config.GrpcPort == "" && fileConfig.GrpcPort != "" {
+		config.GrpcPort = fileConfig.GrpcPort
+	}
 	return nil
 }
 
@@ -67,6 +76,9 @@ func GetConfig() Config {
 	flag.StringVar(&config.Key, "k", "", "Key for hashing")
 	flag.StringVar(&config.CryptoKey, "crypto-key", "", "path to private key")
 	flag.StringVar(&config.Config, "c", "", "path to config JSON file")
+	flag.StringVar(&config.TrustedSubnet, "t", "", "trusted agent subnet")
+	flag.BoolVar(&config.GrpcActive, "g", false, "is grpc active")
+	flag.StringVar(&config.GrpcPort, "p", "3200", "grpc port")
 	flag.Parse()
 	if len(flag.Args()) > 0 {
 		log.Fatal("used not declared arguments")
@@ -102,6 +114,12 @@ func GetConfig() Config {
 	}
 	if envConfig.CryptoKey != "" {
 		config.CryptoKey = envConfig.CryptoKey
+	}
+	if envConfig.TrustedSubnet != "" {
+		config.TrustedSubnet = envConfig.TrustedSubnet
+	}
+	if envConfig.GrpcPort != "" {
+		config.GrpcPort = envConfig.GrpcPort
 	}
 
 	if config.Config != "" {

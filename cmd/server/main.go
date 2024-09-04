@@ -3,16 +3,21 @@ package main
 
 import (
 	"context"
+	"net"
 	"net/http"
 	"os/signal"
 	"syscall"
 	"time"
+
+	"google.golang.org/grpc"
 
 	"github.com/pisarevaa/metrics/internal/server"
 	"github.com/pisarevaa/metrics/internal/server/storage"
 	"github.com/pisarevaa/metrics/internal/server/utils"
 
 	_ "net/http/pprof" //nolint:gosec // profiling agent
+
+	pb "github.com/pisarevaa/metrics/proto"
 )
 
 var buildVersion, buildDate, buildCommit string //nolint:gochecknoglobals // new for task
@@ -51,8 +56,25 @@ func main() {
 		ReadTimeout:  readTimeout * time.Second,
 		WriteTimeout: writeTimeout * time.Second,
 	}
+
+	var grpcServer *grpc.Server
+	if config.GrpcActive {
+		listen, err := net.Listen("tcp", ":"+config.GrpcPort)
+		if err != nil {
+			logger.Fatal(err)
+		}
+		grpcServer = grpc.NewServer()
+		pb.RegisterMetricsServer(grpcServer, server.NewGrpcServer(config, logger, repo))
+		logger.Info("gRPC server is running...")
+		go func() {
+			if errGrpc := grpcServer.Serve(listen); errGrpc != nil {
+				logger.Info("Could not listen on tcp:" + config.GrpcPort)
+			}
+		}()
+	}
+
 	go func() {
-		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		if errServer := srv.ListenAndServe(); errServer != nil && errServer != http.ErrServerClosed {
 			logger.Info("Could not listen on ", config.Host)
 		}
 	}()
@@ -62,6 +84,9 @@ func main() {
 	err := srv.Shutdown(shutdownCtx)
 	if err != nil {
 		logger.Error(err)
+	}
+	if config.GrpcActive {
+		grpcServer.GracefulStop()
 	}
 	logger.Info("Server is gracefully shutdown")
 }

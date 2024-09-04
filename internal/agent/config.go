@@ -21,6 +21,8 @@ type Config struct {
 	CryptoKey      string         `env:"CRYPTO_KEY"      json:"crypto_key"`
 	Config         string         `env:"CONFIG"          json:"config,omitempty"`
 	PublicKey      *rsa.PublicKey `env:"PUBLIC_KEY"      json:"public_key,omitempty"`
+	GrpcPort       string         `env:"GRPC_PORT"       json:"grpc_port,omitempty"`
+	GrpcActive     bool           `env:"GRPC_ACTIVE"     json:"grpc_active,omitempty"`
 }
 
 func getFromJSONFile(config *Config) error {
@@ -45,6 +47,9 @@ func getFromJSONFile(config *Config) error {
 	if config.CryptoKey == "" && fileConfig.CryptoKey != "" {
 		config.CryptoKey = fileConfig.CryptoKey
 	}
+	if config.GrpcPort == "" && fileConfig.GrpcPort != "" {
+		config.GrpcPort = fileConfig.GrpcPort
+	}
 	return nil
 }
 
@@ -59,6 +64,8 @@ func GetConfig() Config {
 	flag.IntVar(&config.RateLimit, "l", 20, "Rate limit to send HTTP requests")
 	flag.StringVar(&config.CryptoKey, "crypto-key", "", "path to public key")
 	flag.StringVar(&config.Config, "c", "", "path to config JSON file")
+	flag.BoolVar(&config.GrpcActive, "g", false, "is grpc active")
+	flag.StringVar(&config.GrpcPort, "s", "3200", "grpc port")
 	flag.Parse()
 	if len(flag.Args()) > 0 {
 		log.Fatal("used not declared arguments")
@@ -91,6 +98,9 @@ func GetConfig() Config {
 	}
 	if envConfig.CryptoKey != "" {
 		config.CryptoKey = envConfig.CryptoKey
+	}
+	if envConfig.GrpcPort != "" {
+		config.GrpcPort = envConfig.GrpcPort
 	}
 
 	if config.Config != "" {
