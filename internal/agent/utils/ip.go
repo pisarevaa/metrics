@@ -5,8 +5,10 @@ import (
 	"net"
 )
 
+const host = "8.8.8.8:80"
+
 func GetOutboundIP() (string, error) {
-	conn, err := net.Dial("udp", "8.8.8.8:80")
+	conn, err := net.Dial("udp", host)
 	if err != nil {
 		return "", err
 	}

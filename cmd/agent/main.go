@@ -42,13 +42,14 @@ func main() {
 
 	semaphore := utils.NewSemaphore(config.RateLimit)
 
-	var grpcClient agent.GrpcClient
+	var grpcClient *agent.GrpcClient
 	if config.GrpcActive {
-		grpcClient, err := agent.NewGrpcClient(config.GrpcPort)
+		_grpcClient, err := agent.NewGrpcClient(config.GrpcPort)
 		if err != nil {
 			logger.Error(err)
 			return
 		}
+		grpcClient = _grpcClient
 		defer grpcClient.Close()
 	}
 	service := agent.NewService(client, storage, config, logger, semaphore, grpcClient)

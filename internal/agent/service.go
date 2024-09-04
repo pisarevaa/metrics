@@ -13,7 +13,7 @@ type Service struct {
 	Config     Config             // параметры конфигурации
 	Logger     *zap.SugaredLogger // логер
 	Semaphore  *utils.Semaphore   // семафор
-	GrpcClient GrpcClient         // GRPC client
+	GrpcClient *GrpcClient        // GRPC client
 }
 
 // Созание нового сервиса.
@@ -23,7 +23,7 @@ func NewService(
 	config Config,
 	logger *zap.SugaredLogger,
 	semaphore *utils.Semaphore,
-	grpcClient GrpcClient,
+	grpcClient *GrpcClient,
 ) *Service {
 	return &Service{
 		Client:     client,

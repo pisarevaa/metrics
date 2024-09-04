@@ -17,14 +17,14 @@ type AgentTestSuite struct {
 	config     agent.Config
 	logger     *zap.SugaredLogger
 	semaphore  *utils.Semaphore
-	grpcClient agent.GrpcClient
+	grpcClient *agent.GrpcClient
 }
 
 func (suite *AgentTestSuite) SetupSuite() {
 	suite.config = agent.GetConfig()
 	suite.logger = agent.GetLogger()
 	suite.client = resty.New()
-	var grpcClient agent.GrpcClient
+	var grpcClient *agent.GrpcClient
 	suite.grpcClient = grpcClient
 	suite.semaphore = utils.NewSemaphore(suite.config.RateLimit)
 }
